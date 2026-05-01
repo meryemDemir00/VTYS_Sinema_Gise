@@ -60,16 +60,29 @@ function loadMovies(initialMovies) {
 
 export default function AdminMovies({ initialMovies = [] }) {
   const [movies, setMovies] = useState([]);
+  const [movieSnapshot, setMovieSnapshot] = useState([]);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [selectedMovie, setSelectedMovie] = useState(null);
   const [toast, setToast] = useState("");
+  const [toastType, setToastType] = useState("success");
 
   useEffect(() => {
-    setMovies(loadMovies(initialMovies));
+    const loadedMovies = loadMovies(initialMovies);
+    setMovies(loadedMovies);
+    setMovieSnapshot(JSON.parse(JSON.stringify(loadedMovies)));
   }, []);
 
-  const showToast = (message) => {
+  const showToast = (message, type = "success") => {
     setToast(message);
-    window.setTimeout(() => setToast(""), 2600);
+    setToastType(type);
+    window.setTimeout(() => setToast(""), 3000);
+  };
+
+  const persistMovies = (nextMovies) => {
+    localStorage.setItem(movieStorageKey, JSON.stringify(nextMovies));
+    setMovieSnapshot(JSON.parse(JSON.stringify(nextMovies)));
   };
 
   const handleAddMovie = (movie) => {
@@ -78,8 +91,52 @@ export default function AdminMovies({ initialMovies = [] }) {
     showToast("Film basariyla eklendi.");
   };
 
+  const handleEditMovie = (movie) => {
+    if (!selectedMovie) return;
+
+    const nextMovies = movies.map((item) => (
+      item.FilmID === selectedMovie.FilmID ? { ...movie, FilmID: selectedMovie.FilmID } : item
+    ));
+    setMovies(nextMovies);
+    persistMovies(nextMovies);
+    setIsEditOpen(false);
+    setSelectedMovie(null);
+    showToast("Film güncellendi.");
+  };
+
+  const openEditMovie = (movie) => {
+    setSelectedMovie(movie);
+    setIsEditOpen(true);
+  };
+
+  const openDeleteMovie = (movie) => {
+    setSelectedMovie(movie);
+    setIsDeleteOpen(true);
+  };
+
+  const cancelDeleteMovie = () => {
+    setSelectedMovie(null);
+    setIsDeleteOpen(false);
+  };
+
+  const confirmDeleteMovie = () => {
+    if (!selectedMovie) return;
+
+    const nextMovies = movies.filter((movie) => movie.FilmID !== selectedMovie.FilmID);
+    setMovies(nextMovies);
+    persistMovies(nextMovies);
+    cancelDeleteMovie();
+    showToast("Film gösterimden kaldırıldı.");
+  };
+
   const handleSaveMovies = () => {
+    if (JSON.stringify(movies) === JSON.stringify(movieSnapshot)) {
+      showToast("Herhangi bir değişiklik yapılmamıştır.", "warning");
+      return;
+    }
+
     localStorage.setItem(movieStorageKey, JSON.stringify(movies));
+    setMovieSnapshot(JSON.parse(JSON.stringify(movies)));
     showToast("Değişiklikler kaydedildi!");
   };
 
@@ -117,8 +174,8 @@ export default function AdminMovies({ initialMovies = [] }) {
               <td>{movie.VizyonTarihi}</td>
               <td>
                 <div className="admin-actions">
-                  <button type="button">Edit</button>
-                  <button className="delete" type="button">x</button>
+                  <button type="button" onClick={() => openEditMovie(movie)}>Edit</button>
+                  <button className="delete" type="button" onClick={() => openDeleteMovie(movie)}>x</button>
                 </div>
               </td>
             </tr>
@@ -132,7 +189,42 @@ export default function AdminMovies({ initialMovies = [] }) {
         onAdd={handleAddMovie}
       />
 
-      {toast && <div className="toast success-toast">{toast}</div>}
+      <AddMovieModal
+        isOpen={isEditOpen}
+        onClose={() => {
+          setIsEditOpen(false);
+          setSelectedMovie(null);
+        }}
+        onAdd={handleEditMovie}
+        initialMovie={selectedMovie}
+        title="Filmi Düzenle"
+      />
+
+      {isDeleteOpen && (
+        <div className="modal-overlay" onMouseDown={(event) => event.target === event.currentTarget && cancelDeleteMovie()}>
+          <section className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-movie-title">
+            <div className="modal-head">
+              <h2 id="delete-movie-title">Filmi Kaldır</h2>
+              <button className="modal-close" type="button" aria-label="Close" onClick={cancelDeleteMovie}>
+                &times;
+              </button>
+            </div>
+            <div className="confirm-body">
+              <p>Bu filmi gösterimden kaldırmak istediğinize emin misiniz?</p>
+              <div className="modal-actions">
+                <button className="btn secondary modal-cancel" type="button" onClick={cancelDeleteMovie}>
+                  Hayır, Vazgeç
+                </button>
+                <button className="btn danger confirm-delete" type="button" onClick={confirmDeleteMovie}>
+                  Evet, Kaldır
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {toast && <div className={`toast ${toastType === "warning" ? "warning-toast" : "success-toast"}`}>{toast}</div>}
     </>
   );
 }

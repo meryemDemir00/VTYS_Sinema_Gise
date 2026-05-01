@@ -1,8 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const genreOptions = ["Animation", "Action", "Sci-Fi", "Adventure", "Drama", "Comedy", "Horror", "Romance"];
 
-export default function AddMovieModal({ isOpen, onClose, onAdd }) {
+const emptyForm = {
+  FilmAdi: "",
+  Turler: [],
+  Sure: "",
+  VizyonTarihi: "",
+  Poster: null,
+  posterPreview: "",
+};
+
+export default function AddMovieModal({ isOpen, onClose, onAdd, initialMovie = null, title = "Add Movie" }) {
   const [form, setForm] = useState({
     FilmAdi: "",
     Turler: [],
@@ -13,10 +22,26 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
   });
   const [errors, setErrors] = useState({});
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setForm(initialMovie
+      ? {
+          FilmAdi: initialMovie.FilmAdi,
+          Turler: initialMovie.Turler,
+          Sure: String(initialMovie.Sure),
+          VizyonTarihi: initialMovie.VizyonTarihi,
+          Poster: initialMovie.Poster,
+          posterPreview: initialMovie.Poster,
+        }
+      : emptyForm);
+    setErrors({});
+  }, [isOpen, initialMovie]);
+
   if (!isOpen) return null;
 
   const resetAndClose = () => {
-    setForm({ FilmAdi: "", Turler: [], Sure: "", VizyonTarihi: "", Poster: null, posterPreview: "" });
+    setForm(emptyForm);
     setErrors({});
     onClose();
   };
@@ -74,7 +99,7 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
     <div className="modal-overlay" onMouseDown={(event) => event.target === event.currentTarget && resetAndClose()}>
       <section className="movie-modal" role="dialog" aria-modal="true" aria-labelledby="add-movie-title">
         <div className="modal-head">
-          <h2 id="add-movie-title">Add Movie</h2>
+          <h2 id="add-movie-title">{title}</h2>
           <button className="modal-close" type="button" aria-label="Close" onClick={resetAndClose}>
             &times;
           </button>

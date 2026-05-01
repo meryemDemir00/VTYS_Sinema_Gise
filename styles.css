@@ -600,6 +600,32 @@ button {
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
 }
 
+.confirm-dialog {
+  width: min(420px, 100%);
+  border-radius: 8px;
+  background: #fff;
+  color: #17221f;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+}
+
+.confirm-body {
+  display: grid;
+  gap: 20px;
+  padding: 20px;
+}
+
+.confirm-body p {
+  margin: 0;
+  line-height: 1.5;
+  color: #17221f;
+  font-weight: 700;
+}
+
+.confirm-delete {
+  background: #ef3434;
+  color: #fff;
+}
+
 .modal-head {
   display: flex;
   align-items: center;
@@ -750,6 +776,10 @@ button {
 
 .success-toast {
   background: #16a34a;
+}
+
+.warning-toast {
+  background: #f59e0b;
 }
 
 .report-grid {

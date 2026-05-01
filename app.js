@@ -93,8 +93,13 @@ const state = {
   selectedSeats: [],
   adminTab: "Movies",
   isAddMovieModalOpen: false,
+  isEditMovieModalOpen: false,
+  isDeleteDialogOpen: false,
+  selectedMovie: null,
   addMoviePoster: "",
   toast: "",
+  toastType: "success",
+  movieSnapshot: [],
 };
 
 const app = document.querySelector("#app");
@@ -136,11 +141,31 @@ function loadMoviesFromStorage() {
   }
 }
 
+function snapshotMovies() {
+  return JSON.parse(JSON.stringify(mock.movies));
+}
+
 function saveMoviesToStorage() {
   localStorage.setItem(movieStorageKey, JSON.stringify(mock.movies));
 }
 
+function persistMovies() {
+  saveMoviesToStorage();
+  state.movieSnapshot = snapshotMovies();
+}
+
+function showToast(message, type = "success") {
+  state.toast = message;
+  state.toastType = type;
+  render();
+  window.setTimeout(() => {
+    state.toast = "";
+    render();
+  }, 3000);
+}
+
 loadMoviesFromStorage();
+state.movieSnapshot = snapshotMovies();
 
 function money(value) {
   return `RM ${value.toFixed(2)}`;
@@ -426,24 +451,31 @@ function admin() {
         </div>
         ${adminContent()}
       </main>
-      ${state.isAddMovieModalOpen ? addMovieModal() : ""}
-      ${state.toast ? `<div class="toast success-toast">${state.toast}</div>` : ""}
+      ${state.isAddMovieModalOpen ? movieModal("add") : ""}
+      ${state.isEditMovieModalOpen ? movieModal("edit") : ""}
+      ${state.isDeleteDialogOpen ? deleteMovieDialog() : ""}
+      ${state.toast ? `<div class="toast ${state.toastType === "warning" ? "warning-toast" : "success-toast"}">${state.toast}</div>` : ""}
     </section>
   `;
 }
 
-function addMovieModal() {
+function movieModal(mode = "add") {
+  const isEdit = mode === "edit";
+  const movie = isEdit ? state.selectedMovie : null;
+  const selectedGenres = movie?.genres || [];
+  const poster = state.addMoviePoster || movie?.poster || "";
+
   return `
-    <div class="modal-overlay" data-close-add-movie>
+    <div class="modal-overlay" data-close-movie-modal>
       <section class="movie-modal" role="dialog" aria-modal="true" aria-labelledby="add-movie-title">
         <div class="modal-head">
-          <h2 id="add-movie-title">Add Movie</h2>
-          <button class="modal-close" type="button" aria-label="Close" data-close-add-movie>&times;</button>
+          <h2 id="add-movie-title">${isEdit ? "Filmi Düzenle" : "Add Movie"}</h2>
+          <button class="modal-close" type="button" aria-label="Close" data-close-movie-modal>&times;</button>
         </div>
-        <form class="movie-form" data-add-movie-form novalidate>
+        <form class="movie-form" data-movie-form data-mode="${mode}" novalidate>
           <div class="form-field">
             <label for="movie-name">FilmAdi</label>
-            <input id="movie-name" name="name" type="text" autocomplete="off" />
+            <input id="movie-name" name="name" type="text" autocomplete="off" value="${movie?.name || ""}" />
             <p class="field-error" data-error-for="name"></p>
           </div>
 
@@ -451,7 +483,7 @@ function addMovieModal() {
             <span class="field-label">Turler</span>
             <div class="genre-tags" data-genre-tags>
               ${movieGenreOptions.map((genre) => `
-                <button type="button" class="genre-tag" data-genre="${genre}" aria-pressed="false">${genre}</button>
+                <button type="button" class="genre-tag ${selectedGenres.includes(genre) ? "selected" : ""}" data-genre="${genre}" aria-pressed="${selectedGenres.includes(genre) ? "true" : "false"}">${genre}</button>
               `).join("")}
             </div>
             <p class="field-error" data-error-for="genres"></p>
@@ -460,12 +492,12 @@ function addMovieModal() {
           <div class="form-grid">
             <div class="form-field">
               <label for="movie-duration">Sure</label>
-              <input id="movie-duration" name="duration" type="number" min="1" step="1" />
+              <input id="movie-duration" name="duration" type="number" min="1" step="1" value="${movie?.duration || ""}" />
               <p class="field-error" data-error-for="duration"></p>
             </div>
             <div class="form-field">
               <label for="movie-release-date">VizyonTarihi</label>
-              <input id="movie-release-date" name="releaseDate" type="date" />
+              <input id="movie-release-date" name="releaseDate" type="date" value="${movie?.releaseDate || ""}" />
               <p class="field-error" data-error-for="releaseDate"></p>
             </div>
           </div>
@@ -473,17 +505,37 @@ function addMovieModal() {
           <div class="form-field">
             <label for="movie-poster">Poster</label>
             <input id="movie-poster" name="poster" type="file" accept="image/*" />
-            <div class="poster-preview ${state.addMoviePoster ? "has-image" : ""}" data-poster-preview>
-              ${state.addMoviePoster ? `<img src="${state.addMoviePoster}" alt="Poster preview">` : `<span>Poster preview</span>`}
+            <div class="poster-preview ${poster ? "has-image" : ""}" data-poster-preview>
+              ${poster ? `<img src="${poster}" alt="Poster preview">` : `<span>Poster preview</span>`}
             </div>
             <p class="field-error" data-error-for="poster"></p>
           </div>
 
           <div class="modal-actions">
-            <button class="btn secondary modal-cancel" type="button" data-close-add-movie>Iptal</button>
+            <button class="btn secondary modal-cancel" type="button" data-close-movie-modal>Iptal</button>
             <button class="btn modal-save" type="submit">Kaydet</button>
           </div>
         </form>
+      </section>
+    </div>
+  `;
+}
+
+function deleteMovieDialog() {
+  return `
+    <div class="modal-overlay" data-cancel-delete-movie>
+      <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-movie-title">
+        <div class="modal-head">
+          <h2 id="delete-movie-title">Filmi Kaldır</h2>
+          <button class="modal-close" type="button" aria-label="Close" data-cancel-delete-movie>&times;</button>
+        </div>
+        <div class="confirm-body">
+          <p>Bu filmi gösterimden kaldırmak istediğinize emin misiniz?</p>
+          <div class="modal-actions">
+            <button class="btn secondary modal-cancel" type="button" data-cancel-delete-movie>Hayır, Vazgeç</button>
+            <button class="btn danger confirm-delete" type="button" data-confirm-delete-movie>Evet, Kaldır</button>
+          </div>
+        </div>
       </section>
     </div>
   `;
@@ -539,7 +591,7 @@ function adminContent() {
             <td>${movie.genres.join(", ")}</td>
             <td>${movie.duration}</td>
             <td>${movie.releaseDate}</td>
-            <td><div class="admin-actions"><button>Edit</button><button class="delete">x</button></div></td>
+            <td><div class="admin-actions"><button data-edit-movie="${movie.id}">Edit</button><button class="delete" data-delete-movie="${movie.id}">x</button></div></td>
           </tr>
         `).join("")}
       </tbody>
@@ -575,26 +627,72 @@ document.addEventListener("click", (event) => {
   const openAddMovie = event.target.closest("[data-open-add-movie]");
   if (openAddMovie) {
     state.isAddMovieModalOpen = true;
+    state.isEditMovieModalOpen = false;
+    state.selectedMovie = null;
     state.addMoviePoster = "";
     render();
     return;
   }
 
-  const saveMovies = event.target.closest("[data-save-movies]");
-  if (saveMovies) {
-    saveMoviesToStorage();
-    state.toast = "Değişiklikler kaydedildi!";
-    render();
-    window.setTimeout(() => {
-      state.toast = "";
+  const editMovie = event.target.closest("[data-edit-movie]");
+  if (editMovie) {
+    const movie = mock.movies.find((item) => item.id === Number(editMovie.dataset.editMovie));
+    if (movie) {
+      state.selectedMovie = { ...movie, genres: [...movie.genres] };
+      state.addMoviePoster = movie.poster;
+      state.isEditMovieModalOpen = true;
       render();
-    }, 2600);
+    }
     return;
   }
 
-  const closeAddMovie = event.target.closest("[data-close-add-movie]");
-  if (closeAddMovie && (event.target === closeAddMovie || event.target.closest(".modal-close, .modal-cancel"))) {
+  const deleteMovie = event.target.closest("[data-delete-movie]");
+  if (deleteMovie) {
+    const movie = mock.movies.find((item) => item.id === Number(deleteMovie.dataset.deleteMovie));
+    if (movie) {
+      state.selectedMovie = movie;
+      state.isDeleteDialogOpen = true;
+      render();
+    }
+    return;
+  }
+
+  const cancelDeleteMovie = event.target.closest("[data-cancel-delete-movie]");
+  if (cancelDeleteMovie && (event.target === cancelDeleteMovie || event.target.closest(".modal-close, .modal-cancel"))) {
+    state.isDeleteDialogOpen = false;
+    state.selectedMovie = null;
+    render();
+    return;
+  }
+
+  const confirmDeleteMovie = event.target.closest("[data-confirm-delete-movie]");
+  if (confirmDeleteMovie && state.selectedMovie) {
+    mock.movies = mock.movies.filter((movie) => movie.id !== state.selectedMovie.id);
+    persistMovies();
+    state.isDeleteDialogOpen = false;
+    state.selectedMovie = null;
+    showToast("Film gösterimden kaldırıldı.", "success");
+    return;
+  }
+
+  const saveMovies = event.target.closest("[data-save-movies]");
+  if (saveMovies) {
+    if (JSON.stringify(mock.movies) === JSON.stringify(state.movieSnapshot)) {
+      showToast("Herhangi bir değişiklik yapılmamıştır.", "warning");
+      return;
+    }
+
+    saveMoviesToStorage();
+    state.movieSnapshot = snapshotMovies();
+    showToast("Değişiklikler kaydedildi!", "success");
+    return;
+  }
+
+  const closeMovieModal = event.target.closest("[data-close-movie-modal]");
+  if (closeMovieModal && (event.target === closeMovieModal || event.target.closest(".modal-close, .modal-cancel"))) {
     state.isAddMovieModalOpen = false;
+    state.isEditMovieModalOpen = false;
+    state.selectedMovie = null;
     state.addMoviePoster = "";
     render();
     return;
@@ -681,10 +779,11 @@ document.addEventListener("input", (event) => {
 });
 
 document.addEventListener("submit", (event) => {
-  const form = event.target.closest("[data-add-movie-form]");
+  const form = event.target.closest("[data-movie-form]");
   if (!form) return;
   event.preventDefault();
 
+  const isEdit = form.dataset.mode === "edit";
   const formData = new FormData(form);
   const name = String(formData.get("name") || "").trim();
   const duration = Number(formData.get("duration"));
@@ -709,34 +808,37 @@ document.addEventListener("submit", (event) => {
 
   if (Object.keys(errors).length) return;
 
-  const nextId = mock.movies.reduce((max, movie) => Math.max(max, movie.id), 0) + 1;
-  mock.movies.push({
-    id: nextId,
+  const movieData = {
+    id: isEdit ? state.selectedMovie.id : mock.movies.reduce((max, movie) => Math.max(max, movie.id), 0) + 1,
     name,
     genres,
-    director: "",
+    director: isEdit ? state.selectedMovie.director : "",
     duration,
     releaseDate,
     poster: state.addMoviePoster,
-    price: 150,
-    rating: "-",
-  });
+    price: isEdit ? state.selectedMovie.price : 150,
+    rating: isEdit ? state.selectedMovie.rating : "-",
+  };
+
+  if (isEdit) {
+    mock.movies = mock.movies.map((movie) => (movie.id === state.selectedMovie.id ? movieData : movie));
+    persistMovies();
+  } else {
+    mock.movies.push(movieData);
+  }
 
   state.isAddMovieModalOpen = false;
+  state.isEditMovieModalOpen = false;
+  state.selectedMovie = null;
   state.addMoviePoster = "";
-  state.toast = "Film basariyla eklendi.";
-  render();
-
-  window.setTimeout(() => {
-    state.toast = "";
-    render();
-  }, 2600);
+  showToast(isEdit ? "Film güncellendi." : "Film basariyla eklendi.", "success");
 });
 
 window.addEventListener("hashchange", render);
 window.addEventListener("storage", (event) => {
   if (event.key === movieStorageKey) {
     loadMoviesFromStorage();
+    state.movieSnapshot = snapshotMovies();
     render();
   }
 });
