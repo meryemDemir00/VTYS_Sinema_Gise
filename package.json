@@ -13,5 +13,9 @@
   "type": "module",
   "devDependencies": {
     "vite": "^8.0.10"
+  },
+  "dependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   }
 }

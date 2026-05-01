@@ -92,6 +92,9 @@ const state = {
   selectedTime: "",
   selectedSeats: [],
   adminTab: "Movies",
+  isAddMovieModalOpen: false,
+  addMoviePoster: "",
+  toast: "",
 };
 
 const app = document.querySelector("#app");
@@ -100,6 +103,44 @@ const takenSeats = new Set(["A3", "A4", "B8", "C2", "D5", "D6", "E7", "F1", "G9"
 const showTimes = ["11:30", "13:30", "16:30", "20:30"];
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const movieGenreOptions = ["Animation", "Action", "Sci-Fi", "Adventure", "Drama", "Comedy", "Horror", "Romance"];
+const movieStorageKey = "movieList";
+
+function normalizeMovie(movie, index = 0) {
+  const rawGenres = movie.genres ?? movie.Turler ?? [];
+  const genres = Array.isArray(rawGenres)
+    ? rawGenres
+    : String(rawGenres).split(",").map((genre) => genre.trim()).filter(Boolean);
+
+  return {
+    id: Number(movie.id ?? movie.FilmID ?? index + 1),
+    name: movie.name ?? movie.FilmAdi ?? "",
+    genres,
+    director: movie.director ?? "",
+    duration: Number(movie.duration ?? movie.Sure ?? 0),
+    releaseDate: movie.releaseDate ?? movie.VizyonTarihi ?? "",
+    poster: movie.poster ?? movie.Poster ?? "",
+    price: Number(movie.price ?? 150),
+    rating: movie.rating ?? "-",
+  };
+}
+
+function loadMoviesFromStorage() {
+  try {
+    const storedMovies = JSON.parse(localStorage.getItem(movieStorageKey) || "[]");
+    if (Array.isArray(storedMovies) && storedMovies.length) {
+      mock.movies = storedMovies.map(normalizeMovie);
+    }
+  } catch {
+    localStorage.removeItem(movieStorageKey);
+  }
+}
+
+function saveMoviesToStorage() {
+  localStorage.setItem(movieStorageKey, JSON.stringify(mock.movies));
+}
+
+loadMoviesFromStorage();
 
 function money(value) {
   return `RM ${value.toFixed(2)}`;
@@ -214,6 +255,8 @@ function layout(content, options = {}) {
 }
 
 function home() {
+  loadMoviesFromStorage();
+
   return layout(`
     <h1 class="center-title">Now Showing</h1>
     <div class="movie-grid">
@@ -221,7 +264,8 @@ function home() {
         <button class="movie-card" data-movie="${movie.id}" data-route="detail">
           <span class="poster" style="background-image:url('${movie.poster}')"></span>
           <span class="movie-title">${movie.name}</span>
-          <span class="movie-meta">${movie.genres.join(", ")} | ${movie.duration} min</span>
+          <span class="movie-meta">${movie.genres.join(", ")}</span>
+          <span class="movie-meta">${movie.duration} min | ${movie.releaseDate}</span>
         </button>
       `).join("")}
     </div>
@@ -382,7 +426,66 @@ function admin() {
         </div>
         ${adminContent()}
       </main>
+      ${state.isAddMovieModalOpen ? addMovieModal() : ""}
+      ${state.toast ? `<div class="toast success-toast">${state.toast}</div>` : ""}
     </section>
+  `;
+}
+
+function addMovieModal() {
+  return `
+    <div class="modal-overlay" data-close-add-movie>
+      <section class="movie-modal" role="dialog" aria-modal="true" aria-labelledby="add-movie-title">
+        <div class="modal-head">
+          <h2 id="add-movie-title">Add Movie</h2>
+          <button class="modal-close" type="button" aria-label="Close" data-close-add-movie>&times;</button>
+        </div>
+        <form class="movie-form" data-add-movie-form novalidate>
+          <div class="form-field">
+            <label for="movie-name">FilmAdi</label>
+            <input id="movie-name" name="name" type="text" autocomplete="off" />
+            <p class="field-error" data-error-for="name"></p>
+          </div>
+
+          <div class="form-field">
+            <span class="field-label">Turler</span>
+            <div class="genre-tags" data-genre-tags>
+              ${movieGenreOptions.map((genre) => `
+                <button type="button" class="genre-tag" data-genre="${genre}" aria-pressed="false">${genre}</button>
+              `).join("")}
+            </div>
+            <p class="field-error" data-error-for="genres"></p>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="movie-duration">Sure</label>
+              <input id="movie-duration" name="duration" type="number" min="1" step="1" />
+              <p class="field-error" data-error-for="duration"></p>
+            </div>
+            <div class="form-field">
+              <label for="movie-release-date">VizyonTarihi</label>
+              <input id="movie-release-date" name="releaseDate" type="date" />
+              <p class="field-error" data-error-for="releaseDate"></p>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="movie-poster">Poster</label>
+            <input id="movie-poster" name="poster" type="file" accept="image/*" />
+            <div class="poster-preview ${state.addMoviePoster ? "has-image" : ""}" data-poster-preview>
+              ${state.addMoviePoster ? `<img src="${state.addMoviePoster}" alt="Poster preview">` : `<span>Poster preview</span>`}
+            </div>
+            <p class="field-error" data-error-for="poster"></p>
+          </div>
+
+          <div class="modal-actions">
+            <button class="btn secondary modal-cancel" type="button" data-close-add-movie>Iptal</button>
+            <button class="btn modal-save" type="submit">Kaydet</button>
+          </div>
+        </form>
+      </section>
+    </div>
   `;
 }
 
@@ -420,7 +523,10 @@ function adminContent() {
   }
 
   return `
-    <button class="btn small">Add Movies</button>
+    <div class="admin-toolbar">
+      <button class="btn small" data-open-add-movie>Add Movies</button>
+      <button class="btn small save-movies-btn" data-save-movies>Kaydet</button>
+    </div>
     <br><br>
     <table class="admin-table">
       <thead><tr><th>FilmID</th><th>Poster</th><th>FilmAdi</th><th>Turler</th><th>Sure</th><th>VizyonTarihi</th><th></th></tr></thead>
@@ -460,11 +566,49 @@ function render() {
     success,
     "admin-login": adminLogin,
     admin,
+    movies: home,
   };
   app.innerHTML = (routes[currentRoute()] || home)();
 }
 
 document.addEventListener("click", (event) => {
+  const openAddMovie = event.target.closest("[data-open-add-movie]");
+  if (openAddMovie) {
+    state.isAddMovieModalOpen = true;
+    state.addMoviePoster = "";
+    render();
+    return;
+  }
+
+  const saveMovies = event.target.closest("[data-save-movies]");
+  if (saveMovies) {
+    saveMoviesToStorage();
+    state.toast = "Değişiklikler kaydedildi!";
+    render();
+    window.setTimeout(() => {
+      state.toast = "";
+      render();
+    }, 2600);
+    return;
+  }
+
+  const closeAddMovie = event.target.closest("[data-close-add-movie]");
+  if (closeAddMovie && (event.target === closeAddMovie || event.target.closest(".modal-close, .modal-cancel"))) {
+    state.isAddMovieModalOpen = false;
+    state.addMoviePoster = "";
+    render();
+    return;
+  }
+
+  const genreTag = event.target.closest("[data-genre]");
+  if (genreTag) {
+    genreTag.classList.toggle("selected");
+    genreTag.setAttribute("aria-pressed", genreTag.classList.contains("selected") ? "true" : "false");
+    const error = document.querySelector('[data-error-for="genres"]');
+    if (error) error.textContent = "";
+    return;
+  }
+
   const movieButton = event.target.closest("[data-movie]");
   if (movieButton) {
     state.selectedMovieId = Number(movieButton.dataset.movie);
@@ -506,6 +650,29 @@ document.addEventListener("click", (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  const moviePoster = event.target.closest('[name="poster"]');
+  if (moviePoster) {
+    const file = moviePoster.files?.[0];
+    const error = document.querySelector('[data-error-for="poster"]');
+    if (error) error.textContent = "";
+    if (!file) {
+      state.addMoviePoster = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      state.addMoviePoster = String(reader.result);
+      const preview = document.querySelector("[data-poster-preview]");
+      if (preview) {
+        preview.classList.add("has-image");
+        preview.innerHTML = `<img src="${state.addMoviePoster}" alt="Poster preview">`;
+      }
+    });
+    reader.readAsDataURL(file);
+    return;
+  }
+
   const otp = event.target.closest("[data-otp]");
   if (!otp) return;
   otp.value = otp.value.replace(/\D/g, "").slice(0, 1);
@@ -513,5 +680,64 @@ document.addEventListener("input", (event) => {
   if (otp.value && next) next.focus();
 });
 
+document.addEventListener("submit", (event) => {
+  const form = event.target.closest("[data-add-movie-form]");
+  if (!form) return;
+  event.preventDefault();
+
+  const formData = new FormData(form);
+  const name = String(formData.get("name") || "").trim();
+  const duration = Number(formData.get("duration"));
+  const releaseDate = String(formData.get("releaseDate") || "");
+  const genres = [...form.querySelectorAll("[data-genre].selected")].map((tag) => tag.dataset.genre);
+
+  form.querySelectorAll(".field-error").forEach((error) => {
+    error.textContent = "";
+  });
+
+  const errors = {};
+  if (!name) errors.name = "FilmAdi zorunludur.";
+  if (!genres.length) errors.genres = "En az bir tur secin.";
+  if (!duration || duration < 1) errors.duration = "Sure zorunludur.";
+  if (!releaseDate) errors.releaseDate = "VizyonTarihi zorunludur.";
+  if (!state.addMoviePoster) errors.poster = "Poster zorunludur.";
+
+  Object.entries(errors).forEach(([field, message]) => {
+    const error = form.querySelector(`[data-error-for="${field}"]`);
+    if (error) error.textContent = message;
+  });
+
+  if (Object.keys(errors).length) return;
+
+  const nextId = mock.movies.reduce((max, movie) => Math.max(max, movie.id), 0) + 1;
+  mock.movies.push({
+    id: nextId,
+    name,
+    genres,
+    director: "",
+    duration,
+    releaseDate,
+    poster: state.addMoviePoster,
+    price: 150,
+    rating: "-",
+  });
+
+  state.isAddMovieModalOpen = false;
+  state.addMoviePoster = "";
+  state.toast = "Film basariyla eklendi.";
+  render();
+
+  window.setTimeout(() => {
+    state.toast = "";
+    render();
+  }, 2600);
+});
+
 window.addEventListener("hashchange", render);
+window.addEventListener("storage", (event) => {
+  if (event.key === movieStorageKey) {
+    loadMoviesFromStorage();
+    render();
+  }
+});
 render();
