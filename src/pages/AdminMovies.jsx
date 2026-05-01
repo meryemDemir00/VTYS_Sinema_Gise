@@ -67,12 +67,19 @@ export default function AdminMovies({ initialMovies = [] }) {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [toast, setToast] = useState("");
   const [toastType, setToastType] = useState("success");
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     const loadedMovies = loadMovies(initialMovies);
     setMovies(loadedMovies);
     setMovieSnapshot(JSON.parse(JSON.stringify(loadedMovies)));
+    setIsHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    localStorage.setItem(movieStorageKey, JSON.stringify(movies));
+  }, [movies, isHydrated]);
 
   const showToast = (message, type = "success") => {
     setToast(message);
@@ -81,7 +88,6 @@ export default function AdminMovies({ initialMovies = [] }) {
   };
 
   const persistMovies = (nextMovies) => {
-    localStorage.setItem(movieStorageKey, JSON.stringify(nextMovies));
     setMovieSnapshot(JSON.parse(JSON.stringify(nextMovies)));
   };
 

@@ -92,6 +92,11 @@ const state = {
   selectedTime: "",
   selectedSeats: [],
   adminTab: "Movies",
+  adminLogin: {
+    username: "",
+    password: "",
+    error: "",
+  },
   isAddMovieModalOpen: false,
   isEditMovieModalOpen: false,
   isDeleteDialogOpen: false,
@@ -425,12 +430,13 @@ function adminLogin() {
     <section class="form-screen admin-login">
       <div class="login-card">
         <h1>Admin Login</h1>
-        <div class="input-stack">
-          <input placeholder="Username" value="administrator" />
-          <input placeholder="Password" type="password" value="123456" />
-          <button class="btn" data-route="admin">Login</button>
-          <button class="btn secondary" data-route="home">Back to cinema</button>
-        </div>
+        <form class="input-stack" data-admin-login-form autocomplete="off" novalidate>
+          <input name="username" value="${state.adminLogin.username}" autocomplete="off" data-admin-login-field="username" />
+          <input name="password" type="password" value="${state.adminLogin.password}" autocomplete="off" data-admin-login-field="password" />
+          ${state.adminLogin.error ? `<p class="login-error">${state.adminLogin.error}</p>` : ""}
+          <button class="btn" type="submit">Login</button>
+          <button class="btn secondary" type="button" data-route="home">Back to cinema</button>
+        </form>
       </div>
     </section>
   `;
@@ -715,6 +721,9 @@ document.addEventListener("click", (event) => {
 
   const routeButton = event.target.closest("[data-route]");
   if (routeButton && !routeButton.disabled) {
+    if (routeButton.dataset.route === "admin-login") {
+      state.adminLogin = { username: "", password: "", error: "" };
+    }
     setRoute(routeButton.dataset.route);
   }
 
@@ -748,6 +757,16 @@ document.addEventListener("click", (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  const adminLoginField = event.target.closest("[data-admin-login-field]");
+  if (adminLoginField) {
+    state.adminLogin = {
+      ...state.adminLogin,
+      [adminLoginField.dataset.adminLoginField]: adminLoginField.value,
+      error: "",
+    };
+    return;
+  }
+
   const moviePoster = event.target.closest('[name="poster"]');
   if (moviePoster) {
     const file = moviePoster.files?.[0];
@@ -779,6 +798,21 @@ document.addEventListener("input", (event) => {
 });
 
 document.addEventListener("submit", (event) => {
+  const adminLoginForm = event.target.closest("[data-admin-login-form]");
+  if (adminLoginForm) {
+    event.preventDefault();
+
+    if (state.adminLogin.username === "admin" && state.adminLogin.password === "admin123") {
+      state.adminLogin = { username: "", password: "", error: "" };
+      setRoute("admin");
+      return;
+    }
+
+    state.adminLogin.error = "Kullanıcı adı veya şifre hatalı!";
+    render();
+    return;
+  }
+
   const form = event.target.closest("[data-movie-form]");
   if (!form) return;
   event.preventDefault();
@@ -825,6 +859,7 @@ document.addEventListener("submit", (event) => {
     persistMovies();
   } else {
     mock.movies.push(movieData);
+    persistMovies();
   }
 
   state.isAddMovieModalOpen = false;
