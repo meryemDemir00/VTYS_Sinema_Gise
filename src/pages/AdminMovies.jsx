@@ -8,7 +8,7 @@ const defaultMovies = [
     FilmID: 1,
     Poster: "assets/poster-kungfu.png",
     FilmAdi: "Kung Fu Panda 4",
-    Turler: ["Animation", "Action"],
+    Turler: ["Animasyon", "Aksiyon"],
     Sure: 94,
     VizyonTarihi: "2024-03-08",
   },
@@ -16,7 +16,7 @@ const defaultMovies = [
     FilmID: 2,
     Poster: "assets/poster-dune.png",
     FilmAdi: "Dune: Part Two",
-    Turler: ["Sci-Fi", "Adventure"],
+    Turler: ["Bilim Kurgu", "Macera"],
     Sure: 166,
     VizyonTarihi: "2024-03-01",
   },
@@ -24,7 +24,7 @@ const defaultMovies = [
     FilmID: 3,
     Poster: "assets/poster-drive.png",
     FilmAdi: "Drive Away Dolls",
-    Turler: ["Comedy", "Crime"],
+    Turler: ["Komedi", "Suç"],
     Sure: 84,
     VizyonTarihi: "2024-02-23",
   },
@@ -94,7 +94,7 @@ export default function AdminMovies({ initialMovies = [] }) {
   const handleAddMovie = (movie) => {
     const nextId = movies.reduce((max, item) => Math.max(max, item.FilmID), 0) + 1;
     setMovies([...movies, { FilmID: nextId, ...movie }]);
-    showToast("Film basariyla eklendi.");
+    showToast("Film başarıyla eklendi.");
   };
 
   const handleEditMovie = (movie) => {
@@ -150,7 +150,7 @@ export default function AdminMovies({ initialMovies = [] }) {
     <>
       <div className="admin-toolbar">
         <button className="btn small" type="button" onClick={() => setIsAddOpen(true)}>
-          Add Movies
+          Film Ekle
         </button>
         <button className="btn small save-movies-btn" type="button" onClick={handleSaveMovies}>
           Kaydet
@@ -160,12 +160,12 @@ export default function AdminMovies({ initialMovies = [] }) {
       <table className="admin-table">
         <thead>
           <tr>
-            <th>FilmID</th>
+            <th>Film ID</th>
             <th>Poster</th>
-            <th>FilmAdi</th>
-            <th>Turler</th>
-            <th>Sure</th>
-            <th>VizyonTarihi</th>
+            <th>Film Adı</th>
+            <th>Türler</th>
+            <th>Süre</th>
+            <th>Vizyon Tarihi</th>
             <th></th>
           </tr>
         </thead>
@@ -180,8 +180,8 @@ export default function AdminMovies({ initialMovies = [] }) {
               <td>{movie.VizyonTarihi}</td>
               <td>
                 <div className="admin-actions">
-                  <button type="button" onClick={() => openEditMovie(movie)}>Edit</button>
-                  <button className="delete" type="button" onClick={() => openDeleteMovie(movie)}>x</button>
+                  <button type="button" onClick={() => openEditMovie(movie)}>Düzenle</button>
+                  <button className="delete" type="button" onClick={() => openDeleteMovie(movie)}>Sil</button>
                 </div>
               </td>
             </tr>
@@ -211,7 +211,7 @@ export default function AdminMovies({ initialMovies = [] }) {
           <section className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-movie-title">
             <div className="modal-head">
               <h2 id="delete-movie-title">Filmi Kaldır</h2>
-              <button className="modal-close" type="button" aria-label="Close" onClick={cancelDeleteMovie}>
+              <button className="modal-close" type="button" aria-label="Kapat" onClick={cancelDeleteMovie}>
                 &times;
               </button>
             </div>

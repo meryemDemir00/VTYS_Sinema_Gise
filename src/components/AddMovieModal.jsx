@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const genreOptions = ["Animation", "Action", "Sci-Fi", "Adventure", "Drama", "Comedy", "Horror", "Romance"];
+const genreOptions = ["Animasyon", "Aksiyon", "Bilim Kurgu", "Macera", "Dram", "Komedi", "Korku", "Romantik"];
 
 const emptyForm = {
   FilmAdi: "",
@@ -11,7 +11,7 @@ const emptyForm = {
   posterPreview: "",
 };
 
-export default function AddMovieModal({ isOpen, onClose, onAdd, initialMovie = null, title = "Add Movie" }) {
+export default function AddMovieModal({ isOpen, onClose, onAdd, initialMovie = null, title = "Film Ekle" }) {
   const [form, setForm] = useState({
     FilmAdi: "",
     Turler: [],
@@ -76,10 +76,10 @@ export default function AddMovieModal({ isOpen, onClose, onAdd, initialMovie = n
     event.preventDefault();
 
     const nextErrors = {};
-    if (!form.FilmAdi.trim()) nextErrors.FilmAdi = "FilmAdi zorunludur.";
-    if (!form.Turler.length) nextErrors.Turler = "En az bir tur secin.";
-    if (!form.Sure) nextErrors.Sure = "Sure zorunludur.";
-    if (!form.VizyonTarihi) nextErrors.VizyonTarihi = "VizyonTarihi zorunludur.";
+    if (!form.FilmAdi.trim()) nextErrors.FilmAdi = "Film adı zorunludur.";
+    if (!form.Turler.length) nextErrors.Turler = "En az bir tür seçin.";
+    if (!form.Sure) nextErrors.Sure = "Süre zorunludur.";
+    if (!form.VizyonTarihi) nextErrors.VizyonTarihi = "Vizyon tarihi zorunludur.";
     if (!form.Poster) nextErrors.Poster = "Poster zorunludur.";
 
     setErrors(nextErrors);
@@ -100,14 +100,14 @@ export default function AddMovieModal({ isOpen, onClose, onAdd, initialMovie = n
       <section className="movie-modal" role="dialog" aria-modal="true" aria-labelledby="add-movie-title">
         <div className="modal-head">
           <h2 id="add-movie-title">{title}</h2>
-          <button className="modal-close" type="button" aria-label="Close" onClick={resetAndClose}>
+          <button className="modal-close" type="button" aria-label="Kapat" onClick={resetAndClose}>
             &times;
           </button>
         </div>
 
         <form className="movie-form" onSubmit={handleSubmit} noValidate>
           <div className="form-field">
-            <label htmlFor="movie-name">FilmAdi</label>
+            <label htmlFor="movie-name">Film Adı</label>
             <input
               id="movie-name"
               type="text"
@@ -118,7 +118,7 @@ export default function AddMovieModal({ isOpen, onClose, onAdd, initialMovie = n
           </div>
 
           <div className="form-field">
-            <span className="field-label">Turler</span>
+            <span className="field-label">Türler</span>
             <div className="genre-tags">
               {genreOptions.map((genre) => (
                 <button
@@ -136,7 +136,7 @@ export default function AddMovieModal({ isOpen, onClose, onAdd, initialMovie = n
 
           <div className="form-grid">
             <div className="form-field">
-              <label htmlFor="movie-duration">Sure</label>
+              <label htmlFor="movie-duration">Süre</label>
               <input
                 id="movie-duration"
                 type="number"
@@ -147,7 +147,7 @@ export default function AddMovieModal({ isOpen, onClose, onAdd, initialMovie = n
               {errors.Sure && <p className="field-error">{errors.Sure}</p>}
             </div>
             <div className="form-field">
-              <label htmlFor="movie-release-date">VizyonTarihi</label>
+              <label htmlFor="movie-release-date">Vizyon Tarihi</label>
               <input
                 id="movie-release-date"
                 type="date"
@@ -162,14 +162,14 @@ export default function AddMovieModal({ isOpen, onClose, onAdd, initialMovie = n
             <label htmlFor="movie-poster">Poster</label>
             <input id="movie-poster" type="file" accept="image/*" onChange={handlePosterChange} />
             <div className={`poster-preview ${form.posterPreview ? "has-image" : ""}`}>
-              {form.posterPreview ? <img src={form.posterPreview} alt="Poster preview" /> : <span>Poster preview</span>}
+              {form.posterPreview ? <img src={form.posterPreview} alt="Poster önizlemesi" /> : <span>Poster önizlemesi</span>}
             </div>
             {errors.Poster && <p className="field-error">{errors.Poster}</p>}
           </div>
 
           <div className="modal-actions">
             <button className="btn secondary modal-cancel" type="button" onClick={resetAndClose}>
-              Iptal
+              İptal
             </button>
             <button className="btn modal-save" type="submit">
               Kaydet

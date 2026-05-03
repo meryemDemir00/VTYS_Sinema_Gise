@@ -3,7 +3,7 @@ const mock = {
     {
       id: 1,
       name: "Kung Fu Panda 4",
-      genres: ["Animation", "Action"],
+      genres: ["Animasyon", "Aksiyon"],
       director: "Mike Mitchell",
       duration: 94,
       releaseDate: "2024-03-08",
@@ -14,7 +14,7 @@ const mock = {
     {
       id: 2,
       name: "Dune: Part Two",
-      genres: ["Sci-Fi", "Adventure"],
+      genres: ["Bilim Kurgu", "Macera"],
       director: "Denis Villeneuve",
       duration: 166,
       releaseDate: "2024-03-01",
@@ -25,7 +25,7 @@ const mock = {
     {
       id: 3,
       name: "Drive Away Dolls",
-      genres: ["Comedy", "Crime"],
+      genres: ["Komedi", "Suç"],
       director: "Ethan Coen",
       duration: 84,
       releaseDate: "2024-02-23",
@@ -36,7 +36,7 @@ const mock = {
     {
       id: 4,
       name: "Godzilla x Kong",
-      genres: ["Action", "Fantasy"],
+      genres: ["Aksiyon", "Fantastik"],
       director: "Adam Wingard",
       duration: 115,
       releaseDate: "2024-03-29",
@@ -46,8 +46,8 @@ const mock = {
     },
     {
       id: 5,
-      name: "Movie Title",
-      genres: ["Drama"],
+      name: "Film Başlığı",
+      genres: ["Dram"],
       director: "A. Kaya",
       duration: 112,
       releaseDate: "2024-04-12",
@@ -58,7 +58,7 @@ const mock = {
     {
       id: 6,
       name: "Shadow Empire",
-      genres: ["Thriller"],
+      genres: ["Gerilim"],
       director: "S. Demir",
       duration: 101,
       releaseDate: "2024-04-19",
@@ -91,7 +91,7 @@ const state = {
   selectedDate: "",
   selectedTime: "",
   selectedSeats: [],
-  adminTab: "Movies",
+  adminTab: "Filmler",
   adminLogin: {
     username: "",
     password: "",
@@ -111,9 +111,9 @@ const app = document.querySelector("#app");
 const seatRows = ["A", "B", "C", "D", "E", "F", "G"];
 const takenSeats = new Set(["A3", "A4", "B8", "C2", "D5", "D6", "E7", "F1", "G9"]);
 const showTimes = ["11:30", "13:30", "16:30", "20:30"];
-const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const movieGenreOptions = ["Animation", "Action", "Sci-Fi", "Adventure", "Drama", "Comedy", "Horror", "Romance"];
+const dayNames = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
+const monthNames = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+const movieGenreOptions = ["Animasyon", "Aksiyon", "Bilim Kurgu", "Macera", "Dram", "Komedi", "Korku", "Romantik"];
 const movieStorageKey = "movieList";
 
 function normalizeMovie(movie, index = 0) {
@@ -173,7 +173,7 @@ loadMoviesFromStorage();
 state.movieSnapshot = snapshotMovies();
 
 function money(value) {
-  return `RM ${value.toFixed(2)}`;
+  return `₺${value.toFixed(2)}`;
 }
 
 function pad(value) {
@@ -266,14 +266,15 @@ function layout(content, options = {}) {
   const nav = options.hideAdmin
     ? ""
     : `
-          <button class="btn secondary small" data-route="home">Now Showing</button>
-          <button class="btn small" data-route="admin-login">Admin</button>
+          <button class="btn secondary small" data-route="home">Vizyondakiler</button>
+          <button class="btn small" data-route="admin-login">Yönetim</button>
         `;
   return `
     <section class="screen">
       <header class="topbar">
         <button class="brand" data-route="home" aria-label="Ana sayfa">
-          <span class="brand-mark"></span><span>CineDesk</span>
+          <img class="brand-logo" src="assets/Bilet_in.png" alt="Bilet.in" onerror="this.remove()" />
+          <span class="brand-mark"></span><span>Bilet.in</span>
         </button>
         <nav class="nav-actions">
           ${nav}
@@ -288,14 +289,14 @@ function home() {
   loadMoviesFromStorage();
 
   return layout(`
-    <h1 class="center-title">Now Showing</h1>
+    <h1 class="center-title">Vizyondakiler</h1>
     <div class="movie-grid">
       ${mock.movies.map((movie) => `
         <button class="movie-card" data-movie="${movie.id}" data-route="detail">
           <span class="poster" style="background-image:url('${movie.poster}')"></span>
           <span class="movie-title">${movie.name}</span>
           <span class="movie-meta">${movie.genres.join(", ")}</span>
-          <span class="movie-meta">${movie.duration} min | ${movie.releaseDate}</span>
+          <span class="movie-meta">${movie.duration} dk | ${movie.releaseDate}</span>
         </button>
       `).join("")}
     </div>
@@ -311,9 +312,9 @@ function detail() {
   return layout(`
     <div class="detail-layout">
       <section class="detail-panel">
-        <h1>Theater</h1>
+        <h1>Seans Seçimi</h1>
         <div class="field-group">
-          <label>Select Date</label>
+          <label>Tarih Seçin</label>
           <div class="chip-row">
             ${dates.map((date) => {
               const parts = formatDateParts(date);
@@ -322,21 +323,21 @@ function detail() {
           </div>
         </div>
         <div class="field-group">
-          <label>Time</label>
+          <label>Saat</label>
           <div class="chip-row">
             ${times.map((time) => `<button class="chip ${state.selectedTime === time ? "active" : ""}" data-time="${time}">${time}</button>`).join("")}
           </div>
         </div>
-        ${hasSchedule ? "" : `<p class="empty-note">No future sessions are available right now.</p>`}
-        <button class="btn" data-route="seats" ${hasSchedule ? "" : "disabled"}>Book Now</button>
+        ${hasSchedule ? "" : `<p class="empty-note">Şu anda uygun gelecek seans bulunmuyor.</p>`}
+        <button class="btn" data-route="seats" ${hasSchedule ? "" : "disabled"}>Hemen Bilet Al</button>
       </section>
       <aside class="summary-card">
         <div class="poster" style="background-image:url('${movie.poster}')"></div>
         <h2>${movie.name}</h2>
-        <p>${movie.genres.join(", ")} | ${movie.duration} min</p>
-        <p>Director: ${movie.director}</p>
-        <p>Release: ${movie.releaseDate}</p>
-        <button class="btn" data-route="seats" ${hasSchedule ? "" : "disabled"}>Select Seat</button>
+        <p>${movie.genres.join(", ")} | ${movie.duration} dk</p>
+        <p>Yönetmen: ${movie.director}</p>
+        <p>Vizyon Tarihi: ${movie.releaseDate}</p>
+        <button class="btn" data-route="seats" ${hasSchedule ? "" : "disabled"}>Koltuk Seç</button>
       </aside>
     </div>
   `);
@@ -349,7 +350,7 @@ function seats() {
   const total = movie.price * state.selectedSeats.length;
   return layout(`
     <section class="seat-shell">
-      <h1 class="seat-title">Seat</h1>
+      <h1 class="seat-title">Koltuk Seçimi</h1>
       <div class="seat-map-wrap">
         <div class="seat-map">
           ${seats.map((seat) => {
@@ -358,19 +359,24 @@ function seats() {
             return `<button class="seat ${isTaken ? "taken" : ""} ${isSelected ? "selected" : ""}" ${isTaken ? "disabled" : ""} data-seat="${seat}">${seat}</button>`;
           }).join("")}
         </div>
-        <div class="screen-bar">SCREEN</div>
+        <div class="screen-bar">PERDE</div>
+      </div>
+      <div class="seat-legend" aria-label="Koltuk durumları">
+        <span class="legend-item"><span class="legend-swatch legend-taken"></span>Dolu</span>
+        <span class="legend-item"><span class="legend-swatch legend-empty"></span>Boş</span>
+        <span class="legend-item"><span class="legend-swatch legend-selected"></span>Seçili</span>
       </div>
       <div class="payment-strip">
         <div>
-          <span class="tiny-label">Seat</span>
-          <div>${state.selectedSeats.length ? state.selectedSeats.join(", ") : "Choose seat"}</div>
+          <span class="tiny-label">Koltuk</span>
+          <div>${state.selectedSeats.length ? state.selectedSeats.join(", ") : "Koltuk seçin"}</div>
         </div>
         <div>
-          <span class="tiny-label">Total Payment</span>
+          <span class="tiny-label">Toplam Ödeme</span>
           <div class="pay-value">${money(total)}</div>
         </div>
-        <button class="btn secondary" data-route="detail">Back</button>
-        <button class="btn" data-route="booking" ${state.selectedSeats.length ? "" : "disabled"}>Proceed Payment</button>
+        <button class="btn secondary" data-route="detail">Geri</button>
+        <button class="btn" data-route="booking" ${state.selectedSeats.length ? "" : "disabled"}>Ödemeye Geç</button>
       </div>
     </section>
   `);
@@ -382,18 +388,18 @@ function booking() {
   const total = movie.price * state.selectedSeats.length;
   return layout(`
     <section class="booking-card">
-      <h1>Booking Detail</h1>
+      <h1>Rezervasyon Detayı</h1>
       <div class="booking-lines">
-        <p>Movie Title: <strong>${movie.name}</strong></p>
-        <p>Cinema: <strong>XXI Cinema</strong></p>
-        <p>Screen: <strong>IMAX</strong></p>
-        <p>Date & Time: <strong>${formatBookingDate(state.selectedDate)} - ${state.selectedTime}</strong></p>
-        <p>Seat: <strong>${state.selectedSeats.join(", ")}</strong></p>
-        <p>Ticket Price: <strong>${money(movie.price)}</strong></p>
-        <p>Admin Fee: <strong>RM 0.00</strong></p>
-        <p>Total: <strong>${money(total)}</strong></p>
+        <p>Film Adı: <strong>${movie.name}</strong></p>
+        <p>Sinema: <strong>Bilet.in Sineması</strong></p>
+        <p>Salon: <strong>IMAX</strong></p>
+        <p>Tarih ve Saat: <strong>${formatBookingDate(state.selectedDate)} - ${state.selectedTime}</strong></p>
+        <p>Koltuk: <strong>${state.selectedSeats.join(", ")}</strong></p>
+        <p>Bilet Fiyatı: <strong>${money(movie.price)}</strong></p>
+        <p>Hizmet Bedeli: <strong>₺0.00</strong></p>
+        <p>Toplam: <strong>${money(total)}</strong></p>
       </div>
-      <button class="btn" data-route="otp">Checkout Ticket</button>
+      <button class="btn" data-route="otp">Bileti Satın Al</button>
     </section>
   `);
 }
@@ -402,11 +408,11 @@ function otp() {
   return layout(`
     <section class="form-screen">
       <div class="otp-card dark-card">
-        <h1>Enter Otp</h1>
+        <h1>OTP Kodunu Girin</h1>
         <div class="otp-inputs">
           ${[0, 1, 2, 3].map((index) => `<input maxlength="1" inputmode="numeric" data-otp="${index}" value="${index === 0 ? "5" : ""}" />`).join("")}
         </div>
-        <button class="btn" data-route="success">Submit</button>
+        <button class="btn" data-route="success">Onayla</button>
       </div>
     </section>
   `, { hideAdmin: true });
@@ -417,9 +423,9 @@ function success() {
     <section class="form-screen">
       <div class="success-card dark-card">
         <div class="success-mark">&check;</div>
-        <h1>Payment Success</h1>
-        <button class="btn" data-route="home">Order Ticket</button>
-        <button class="btn secondary" data-route="home">Back to homepage</button>
+        <h1>Ödeme Başarılı</h1>
+        <button class="btn" data-route="home">Yeni Bilet Al</button>
+        <button class="btn secondary" data-route="home">Ana Sayfaya Dön</button>
       </div>
     </section>
   `, { hideAdmin: true });
@@ -429,13 +435,13 @@ function adminLogin() {
   return `
     <section class="form-screen admin-login">
       <div class="login-card">
-        <h1>Admin Login</h1>
+        <h1>Yönetici Girişi</h1>
         <form class="input-stack" data-admin-login-form autocomplete="off" novalidate>
-          <input name="username" value="${state.adminLogin.username}" autocomplete="off" data-admin-login-field="username" />
-          <input name="password" type="password" value="${state.adminLogin.password}" autocomplete="off" data-admin-login-field="password" />
+          <input name="username" value="${state.adminLogin.username}" placeholder="Kullanıcı adı" autocomplete="off" data-admin-login-field="username" />
+          <input name="password" type="password" value="${state.adminLogin.password}" placeholder="Şifre" autocomplete="off" data-admin-login-field="password" />
           ${state.adminLogin.error ? `<p class="login-error">${state.adminLogin.error}</p>` : ""}
-          <button class="btn" type="submit">Login</button>
-          <button class="btn secondary" type="button" data-route="home">Back to cinema</button>
+          <button class="btn" type="submit">Giriş Yap</button>
+          <button class="btn secondary" type="button" data-route="home">Sinemaya Dön</button>
         </form>
       </div>
     </section>
@@ -443,17 +449,17 @@ function adminLogin() {
 }
 
 function admin() {
-  const tabs = ["Movies", "Theaters", "Users", "Orders", "Report"];
+  const tabs = ["Filmler", "Salonlar", "Kullanıcılar", "Siparişler", "Rapor"];
   return `
     <section class="admin-shell">
       <aside class="admin-sidebar">
-        <h2>Movies</h2>
+        <h2>Filmler</h2>
         ${tabs.map((tab) => `<button class="admin-tab ${state.adminTab === tab ? "active" : ""}" data-admin-tab="${tab}">${tab}</button>`).join("")}
       </aside>
       <main class="admin-main">
         <div class="admin-head">
-          <h1>Admin Dashboard</h1>
-          <div class="admin-profile"><span class="avatar"></span> administrator</div>
+          <h1>Yönetim Paneli</h1>
+          <div class="admin-profile"><span class="avatar"></span> yönetici</div>
         </div>
         ${adminContent()}
       </main>
@@ -475,18 +481,18 @@ function movieModal(mode = "add") {
     <div class="modal-overlay" data-close-movie-modal>
       <section class="movie-modal" role="dialog" aria-modal="true" aria-labelledby="add-movie-title">
         <div class="modal-head">
-          <h2 id="add-movie-title">${isEdit ? "Filmi Düzenle" : "Add Movie"}</h2>
-          <button class="modal-close" type="button" aria-label="Close" data-close-movie-modal>&times;</button>
+          <h2 id="add-movie-title">${isEdit ? "Filmi Düzenle" : "Film Ekle"}</h2>
+          <button class="modal-close" type="button" aria-label="Kapat" data-close-movie-modal>&times;</button>
         </div>
         <form class="movie-form" data-movie-form data-mode="${mode}" novalidate>
           <div class="form-field">
-            <label for="movie-name">FilmAdi</label>
+            <label for="movie-name">Film Adı</label>
             <input id="movie-name" name="name" type="text" autocomplete="off" value="${movie?.name || ""}" />
             <p class="field-error" data-error-for="name"></p>
           </div>
 
           <div class="form-field">
-            <span class="field-label">Turler</span>
+            <span class="field-label">Türler</span>
             <div class="genre-tags" data-genre-tags>
               ${movieGenreOptions.map((genre) => `
                 <button type="button" class="genre-tag ${selectedGenres.includes(genre) ? "selected" : ""}" data-genre="${genre}" aria-pressed="${selectedGenres.includes(genre) ? "true" : "false"}">${genre}</button>
@@ -497,12 +503,12 @@ function movieModal(mode = "add") {
 
           <div class="form-grid">
             <div class="form-field">
-              <label for="movie-duration">Sure</label>
+              <label for="movie-duration">Süre</label>
               <input id="movie-duration" name="duration" type="number" min="1" step="1" value="${movie?.duration || ""}" />
               <p class="field-error" data-error-for="duration"></p>
             </div>
             <div class="form-field">
-              <label for="movie-release-date">VizyonTarihi</label>
+              <label for="movie-release-date">Vizyon Tarihi</label>
               <input id="movie-release-date" name="releaseDate" type="date" value="${movie?.releaseDate || ""}" />
               <p class="field-error" data-error-for="releaseDate"></p>
             </div>
@@ -512,13 +518,13 @@ function movieModal(mode = "add") {
             <label for="movie-poster">Poster</label>
             <input id="movie-poster" name="poster" type="file" accept="image/*" />
             <div class="poster-preview ${poster ? "has-image" : ""}" data-poster-preview>
-              ${poster ? `<img src="${poster}" alt="Poster preview">` : `<span>Poster preview</span>`}
+              ${poster ? `<img src="${poster}" alt="Poster önizlemesi">` : `<span>Poster önizlemesi</span>`}
             </div>
             <p class="field-error" data-error-for="poster"></p>
           </div>
 
           <div class="modal-actions">
-            <button class="btn secondary modal-cancel" type="button" data-close-movie-modal>Iptal</button>
+            <button class="btn secondary modal-cancel" type="button" data-close-movie-modal>İptal</button>
             <button class="btn modal-save" type="submit">Kaydet</button>
           </div>
         </form>
@@ -533,7 +539,7 @@ function deleteMovieDialog() {
       <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-movie-title">
         <div class="modal-head">
           <h2 id="delete-movie-title">Filmi Kaldır</h2>
-          <button class="modal-close" type="button" aria-label="Close" data-cancel-delete-movie>&times;</button>
+          <button class="modal-close" type="button" aria-label="Kapat" data-cancel-delete-movie>&times;</button>
         </div>
         <div class="confirm-body">
           <p>Bu filmi gösterimden kaldırmak istediğinize emin misiniz?</p>
@@ -548,8 +554,8 @@ function deleteMovieDialog() {
 }
 
 function adminContent() {
-  if (state.adminTab === "Orders") {
-    return table(["Ticket ID", "Movie", "Customer", "Seat", "Price", "Sale Date"], mock.tickets.map((ticket) => {
+  if (state.adminTab === "Siparişler") {
+    return table(["Bilet ID", "Film", "Müşteri", "Koltuk", "Fiyat", "Satış Tarihi"], mock.tickets.map((ticket) => {
       const session = mock.sessions.find((item) => item.id === ticket.sessionId);
       const movie = getMovie(session.movieId);
       const customer = mock.customers.find((item) => item.id === ticket.customerId);
@@ -557,37 +563,37 @@ function adminContent() {
     }));
   }
 
-  if (state.adminTab === "Report") {
+  if (state.adminTab === "Rapor") {
     const revenue = mock.tickets.reduce((sum, ticket) => sum + ticket.price, 0);
     return `
       <div class="report-grid">
-        <div class="metric">Movies<strong>${mock.movies.length}</strong></div>
-        <div class="metric">Tickets<strong>${mock.tickets.length}</strong></div>
-        <div class="metric">Revenue<strong>${money(revenue)}</strong></div>
+        <div class="metric">Filmler<strong>${mock.movies.length}</strong></div>
+        <div class="metric">Biletler<strong>${mock.tickets.length}</strong></div>
+        <div class="metric">Gelir<strong>${money(revenue)}</strong></div>
       </div>
-      ${table(["Movie", "Tickets Sold", "Revenue"], mock.movies.slice(0, 4).map((movie) => {
+      ${table(["Film", "Satılan Bilet", "Gelir"], mock.movies.slice(0, 4).map((movie) => {
         const sold = mock.tickets.filter((ticket) => mock.sessions.find((s) => s.id === ticket.sessionId)?.movieId === movie.id).length;
         return [movie.name, sold, money(sold * movie.price)];
       }))}
     `;
   }
 
-  if (state.adminTab === "Theaters") {
-    return table(["SalonID", "SalonAdi", "Kapasite", "Ozellik"], mock.halls.map((hall) => [hall.id, hall.name, hall.capacity, hall.feature]));
+  if (state.adminTab === "Salonlar") {
+    return table(["Salon ID", "Salon Adı", "Kapasite", "Özellik"], mock.halls.map((hall) => [hall.id, hall.name, hall.capacity, hall.feature]));
   }
 
-  if (state.adminTab === "Users") {
-    return table(["MusteriID", "AdSoyad", "e-posta", "telefon"], mock.customers.map((customer) => [customer.id, customer.name, customer.email, customer.phone]));
+  if (state.adminTab === "Kullanıcılar") {
+    return table(["Müşteri ID", "Ad Soyad", "E-posta", "Telefon"], mock.customers.map((customer) => [customer.id, customer.name, customer.email, customer.phone]));
   }
 
   return `
     <div class="admin-toolbar">
-      <button class="btn small" data-open-add-movie>Add Movies</button>
+      <button class="btn small" data-open-add-movie>Film Ekle</button>
       <button class="btn small save-movies-btn" data-save-movies>Kaydet</button>
     </div>
     <br><br>
     <table class="admin-table">
-      <thead><tr><th>FilmID</th><th>Poster</th><th>FilmAdi</th><th>Turler</th><th>Sure</th><th>VizyonTarihi</th><th></th></tr></thead>
+      <thead><tr><th>Film ID</th><th>Poster</th><th>Film Adı</th><th>Türler</th><th>Süre</th><th>Vizyon Tarihi</th><th></th></tr></thead>
       <tbody>
         ${mock.movies.map((movie) => `
           <tr>
@@ -597,7 +603,7 @@ function adminContent() {
             <td>${movie.genres.join(", ")}</td>
             <td>${movie.duration}</td>
             <td>${movie.releaseDate}</td>
-            <td><div class="admin-actions"><button data-edit-movie="${movie.id}">Edit</button><button class="delete" data-delete-movie="${movie.id}">x</button></div></td>
+            <td><div class="admin-actions"><button data-edit-movie="${movie.id}">Düzenle</button><button class="delete" data-delete-movie="${movie.id}">Sil</button></div></td>
           </tr>
         `).join("")}
       </tbody>
@@ -783,7 +789,7 @@ document.addEventListener("input", (event) => {
       const preview = document.querySelector("[data-poster-preview]");
       if (preview) {
         preview.classList.add("has-image");
-        preview.innerHTML = `<img src="${state.addMoviePoster}" alt="Poster preview">`;
+        preview.innerHTML = `<img src="${state.addMoviePoster}" alt="Poster önizlemesi">`;
       }
     });
     reader.readAsDataURL(file);
@@ -829,10 +835,10 @@ document.addEventListener("submit", (event) => {
   });
 
   const errors = {};
-  if (!name) errors.name = "FilmAdi zorunludur.";
-  if (!genres.length) errors.genres = "En az bir tur secin.";
-  if (!duration || duration < 1) errors.duration = "Sure zorunludur.";
-  if (!releaseDate) errors.releaseDate = "VizyonTarihi zorunludur.";
+  if (!name) errors.name = "Film adı zorunludur.";
+  if (!genres.length) errors.genres = "En az bir tür seçin.";
+  if (!duration || duration < 1) errors.duration = "Süre zorunludur.";
+  if (!releaseDate) errors.releaseDate = "Vizyon tarihi zorunludur.";
   if (!state.addMoviePoster) errors.poster = "Poster zorunludur.";
 
   Object.entries(errors).forEach(([field, message]) => {
@@ -866,7 +872,7 @@ document.addEventListener("submit", (event) => {
   state.isEditMovieModalOpen = false;
   state.selectedMovie = null;
   state.addMoviePoster = "";
-  showToast(isEdit ? "Film güncellendi." : "Film basariyla eklendi.", "success");
+  showToast(isEdit ? "Film güncellendi." : "Film başarıyla eklendi.", "success");
 });
 
 window.addEventListener("hashchange", render);

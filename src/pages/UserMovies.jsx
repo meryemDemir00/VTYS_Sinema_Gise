@@ -7,7 +7,7 @@ const defaultMovies = [
     FilmID: 1,
     Poster: "assets/poster-kungfu.png",
     FilmAdi: "Kung Fu Panda 4",
-    Turler: ["Animation", "Action"],
+    Turler: ["Animasyon", "Aksiyon"],
     Sure: 94,
     VizyonTarihi: "2024-03-08",
   },
@@ -15,7 +15,7 @@ const defaultMovies = [
     FilmID: 2,
     Poster: "assets/poster-dune.png",
     FilmAdi: "Dune: Part Two",
-    Turler: ["Sci-Fi", "Adventure"],
+    Turler: ["Bilim Kurgu", "Macera"],
     Sure: 166,
     VizyonTarihi: "2024-03-01",
   },
@@ -23,7 +23,7 @@ const defaultMovies = [
     FilmID: 3,
     Poster: "assets/poster-drive.png",
     FilmAdi: "Drive Away Dolls",
-    Turler: ["Comedy", "Crime"],
+    Turler: ["Komedi", "Suç"],
     Sure: 84,
     VizyonTarihi: "2024-02-23",
   },
@@ -73,14 +73,14 @@ export default function UserMovies() {
 
   return (
     <section>
-      <h1 className="center-title">Now Showing</h1>
+      <h1 className="center-title">Vizyondakiler</h1>
       <div className="movie-grid">
         {movies.map((movie) => (
           <article className="movie-card" key={movie.FilmID}>
             <span className="poster" style={{ backgroundImage: `url('${movie.Poster}')` }} />
             <span className="movie-title">{movie.FilmAdi}</span>
             <span className="movie-meta">{movie.Turler.join(", ")}</span>
-            <span className="movie-meta">{movie.Sure} min | {movie.VizyonTarihi}</span>
+            <span className="movie-meta">{movie.Sure} dk | {movie.VizyonTarihi}</span>
           </article>
         ))}
       </div>
