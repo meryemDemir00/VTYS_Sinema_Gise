@@ -1,3 +1,35 @@
+const sql = require('mssql');
+
+// Veri Mimarı MSSQL Bağlantı Ayarları
+const config = {
+    user: 'sa', // SQL Server kurulumunda belirlediğin kullanıcı adı
+    password: '', // SQL Server şifren
+    server: 'localhost', // Aynı bilgisayarda olduğu için localhost
+    database: 'SinematorDB', // SSMS'de oluşturduğumuz veritabanı adı
+    options: {
+        encrypt: false, // Yerel çalışmada SSL zorunluluğunu kapatır
+        trustServerCertificate: true // Sertifika hatalarını engeller
+    }
+};
+
+// Bağlantıyı Test Etme Fonksiyonu
+async function veritabaniBaglan() {
+    try {
+        let pool = await sql.connect(config);
+        console.log("Müjde Emircan! Node.js web sitesi MSSQL'e başarıyla bağlandı.");
+        
+        // Örnek Sorgu: Filmleri konsola basalım
+        let result = await pool.request().query("SELECT * FROM Filmler");
+        console.log("Filmler Tablosu:", result.recordset);
+        
+    } catch (err) {
+        console.error("Veritabanı bağlantı hatası: ", err);
+    }
+}
+
+// Uygulama başlarken bağlantıyı tetikle
+veritabaniBaglan();
+
 const mock = {
   movies: [
     {
