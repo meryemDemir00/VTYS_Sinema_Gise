@@ -3,7 +3,7 @@ const sql = require('mssql');
 // Veri Mimarı MSSQL Bağlantı Ayarları
 const config = {
     user: 'sa', // SQL Server kurulumunda belirlediğin kullanıcı adı
-    password: '', // SQL Server şifren
+    password: '12345', // SQL Server şifren
     server: 'localhost', // Aynı bilgisayarda olduğu için localhost
     database: 'SinematorDB', // SSMS'de oluşturduğumuz veritabanı adı
     options: {
