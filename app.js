@@ -519,7 +519,7 @@ document.addEventListener("click", async (event) => {
   if (routeButton && !routeButton.disabled) {
     const targetRoute = routeButton.dataset.route;
 
-    // === BİLET SATIN ALMA (POST) İŞLEMİ ===
+  // === BİLET SATIN ALMA (POST) İŞLEMİ ===
     // Eğer kullanıcı OTP ekranında 'Onayla' butonuna (success rotasına) basarsa:
     if (targetRoute === "success" && state.selectedSeats.length > 0) {
       
@@ -527,34 +527,40 @@ document.addEventListener("click", async (event) => {
       routeButton.textContent = "Biletler Kesiliyor...";
 
       try {
-        // Seçilen HER BİR koltuk için veritabanına ayrı bir bilet kayıt isteği gönderiyoruz
+        // 1. DİNAMİK SEANS BULMA: Seçilen filme ait gerçek SeansID'yi arıyoruz
+        let gercekSeansID = 1; // Bulamazsak çökmemsi için varsayılan
+        const secilenSeans = mock.sessions.find(s => s.FilmID === state.selectedMovieId);
+        
+        if (secilenSeans) {
+            gercekSeansID = secilenSeans.SeansID; // Eşleşen seansı bulduk!
+        }
+
+        // 2. Seçilen HER BİR koltuk için veritabanına dinamik kayıt atıyoruz
         for (const seat of state.selectedSeats) {
           await fetch(`${API_BASE}/biletler`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              SeansID: 1,     // Şimdilik demo olarak 1 nolu seansı kullanıyoruz
-              MusteriID: 1,   // Şimdilik demo olarak 1 nolu müşteriyi (Sistemde olan) kullanıyoruz
+              SeansID: gercekSeansID, // Artık sabit 1 değil, kullanıcının seçtiği filmin seansı!
+              MusteriID: 1,           // Üye girişi olmadığı için şimdilik sistemdeki 1 nolu müşteri
               KoltukNo: seat
             })
           });
         }
         
-        // Biletler veritabanına kaydedildikten sonra tabloları yenile
         await fetchAllDataFromAPI();
         
-        // Seçilen koltukları dolu olarak işaretle ve seçimi sıfırla
         state.selectedSeats.forEach(s => takenSeats.add(s));
         state.selectedSeats = []; 
 
         showToast("Biletiniz başarıyla oluşturuldu!", "success");
-        setRoute("success"); // İşlem bitince başarılı ekranına geç
+        setRoute("success");
       } catch (err) {
         showToast("Ödeme alınırken hata oluştu!", "warning");
         routeButton.disabled = false;
         routeButton.textContent = "Onayla";
       }
-      return; // İşlem bitti, kodun aşağı inmesini engelle
+      return; 
     }
 
     // Normal sayfa geçişleri için
