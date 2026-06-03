@@ -16,4 +16,8 @@ public interface ApiService {
     // Yazma (POST) İşlemi - Yeni bilet ekler
     @POST("api/biletler")
     Call<ResponseBody> biletAl(@Body BiletIstek bilet);
+
+    // Patron Hasılat Raporunu Getirir
+    @GET("api/rapor/hasilat")
+    Call<List<Rapor>> getHasilatRaporu();
 }

@@ -32,6 +32,22 @@ app.get('/api/filmler', async (req, res) => {
         res.status(500).send("Filmler çekilemedi.");
     }
 });
+// Patron için Hasılat Raporu Rotası
+app.get('/api/rapor/hasilat', async (req, res) => {
+    try {
+        // Veritabanına bağlan (config değişkenin önceden tanımlıysa direkt kullanır)
+        const pool = await sql.connect(config); 
+        
+        // Uzun SQL kodları yazmak yerine sadece Stored Procedure'ü tetikliyoruz (EXEC)
+        const result = await pool.request().query('EXEC sp_FilmHasilatRaporu');
+        
+        // Gelen tabloyu JSON formatında dışarı aktarıyoruz
+        res.json(result.recordset);
+    } catch (err) {
+        console.error("Rapor hatası:", err);
+        res.status(500).send("Sunucu Hatası: Rapor getirilemedi.");
+    }
+});
 
 // Yeni Film Ekle (Yazma)
 app.post('/api/filmler', async (req, res) => {

@@ -26,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnTest;
     private TextView tvSonuc;
     private ListView lvFilmler;
+    private Button btnRapor;
 
     // API'den gelen filmleri tutacağımız ana liste (Tıklanınca hangi filme tıklandığını bulmak için)
     private List<Film> filmListesi;
@@ -38,6 +39,14 @@ public class MainActivity extends AppCompatActivity {
         btnTest = findViewById(R.id.btnTest);
         tvSonuc = findViewById(R.id.tvSonuc);
         lvFilmler = findViewById(R.id.lvFilmler);
+        btnRapor = findViewById(R.id.btnRapor);
+
+        btnRapor.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                patronRaporunuGetir();
+            }
+        });
 
         btnTest.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -110,7 +119,43 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+    private void patronRaporunuGetir() {
+        ApiService apiService = RetrofitClient.getService();
+        Call<List<Rapor>> call = apiService.getHasilatRaporu();
 
+        call.enqueue(new Callback<List<Rapor>>() {
+            @Override
+            public void onResponse(Call<List<Rapor>> call, Response<List<Rapor>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    StringBuilder sb = new StringBuilder();
+                    int genelToplam = 0;
+
+                    for (Rapor r : response.body()) {
+                        sb.append("🎬 ").append(r.getFilmAdi()).append("\n");
+                        sb.append("Satış: ").append(r.getSatilanBilet()).append(" Bilet | ");
+                        sb.append("Ciro: ").append(r.getToplamHasilat()).append(" TL\n\n");
+                        genelToplam += r.getToplamHasilat();
+                    }
+
+                    sb.append("💰 GENEL TOPLAM CİRO: ").append(genelToplam).append(" TL");
+
+                    // Şık bir uyarı penceresi (Dialog) ile raporu ekrana basıyoruz
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("📊 Günlük Hasılat Raporu")
+                            .setMessage(sb.toString())
+                            .setPositiveButton("Kapat", null)
+                            .show();
+                } else {
+                    Toast.makeText(MainActivity.this, "Rapor alınamadı!", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Rapor>> call, Throwable t) {
+                Toast.makeText(MainActivity.this, "Bağlantı Hatası!", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
     private void filmleriGetir() {
         ApiService apiService = RetrofitClient.getService();
         Call<List<Film>> call = apiService.getFilmler();

@@ -11,6 +11,13 @@
         android:layout_height="wrap_content"
         android:text="Bağlantıyı Test Et" />
 
+    <Button
+        android:id="@+id/btnRapor"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="📊 Patron Raporunu Gör" />
+
     <TextView
         android:id="@+id/tvSonuc"
         android:layout_width="wrap_content"
