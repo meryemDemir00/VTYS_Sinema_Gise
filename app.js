@@ -18,6 +18,8 @@ const state = {
   isDeleteDialogOpen: false,
   selectedMovie: null,
   addMoviePoster: "",
+  localMoviePosters: {},
+  localMoviePostersBySignature: {},
   currentUser: null,
   isLoggedIn: false,
   isAuthModalOpen: false,
@@ -74,6 +76,82 @@ const yearOptions = Array.from({ length: 90 }, (_, index) => String(today.getFul
 const dayOptions = Array.from({ length: 31 }, (_, index) => String(index + 1).padStart(2, "0"));
 
 const API_BASE = "http://localhost:3000/api";
+const defaultPosterImage = "assets/default-poster.png";
+
+function isCustomPoster(poster) {
+  return Boolean(poster && poster !== defaultPosterImage);
+}
+
+function movieSignatureFromParts(name, duration, genres) {
+  const normalizedGenres = Array.isArray(genres)
+    ? genres.map((genre) => String(genre).trim()).filter(Boolean)
+    : String(genres || "").split(",").map((genre) => genre.trim()).filter(Boolean);
+
+  return JSON.stringify({
+    name: String(name || "").trim().toLowerCase(),
+    duration: Number(duration || 0),
+    genres: normalizedGenres,
+  });
+}
+
+function movieSignature(movieLike) {
+  return movieSignatureFromParts(
+    movieLike?.FilmAd ?? movieLike?.name ?? "",
+    movieLike?.Sure ?? movieLike?.duration ?? 0,
+    movieLike?.Tur ?? movieLike?.genres ?? [],
+  );
+}
+
+function setMoviePoster(movieId, poster, movieLike = null) {
+  if (isCustomPoster(poster)) {
+    if (movieId) state.localMoviePosters[movieId] = poster;
+    if (movieLike) state.localMoviePostersBySignature[movieSignature(movieLike)] = poster;
+  } else {
+    if (movieId) delete state.localMoviePosters[movieId];
+    if (movieLike) delete state.localMoviePostersBySignature[movieSignature(movieLike)];
+  }
+
+  const movie = mock.movies.find((item) => item.id === Number(movieId));
+  if (movie) {
+    movie.poster = isCustomPoster(poster) ? poster : defaultPosterImage;
+  }
+}
+
+function posterForMovie(movieLike) {
+  const movieId = Number(movieLike?.FilmID ?? movieLike?.id ?? 0);
+  return state.localMoviePosters[movieId]
+    || state.localMoviePostersBySignature[movieSignature(movieLike)]
+    || movieLike?.poster
+    || defaultPosterImage;
+}
+
+function posterMarkup(movie, className = "poster") {
+  const poster = posterForMovie(movie);
+  if (isCustomPoster(poster)) {
+    return `<span class="${className}"><img class="poster-image" src="${poster}" alt="${escapeHtml(movie?.name || "Film posteri")}" /></span>`;
+  }
+
+  return `<span class="${className}" style="background-image:url('${poster}')"></span>`;
+}
+
+function readPosterAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve("");
+      return;
+    }
+
+    if (!String(file.type || "").startsWith("image/")) {
+      reject(new Error("Lutfen gecerli bir gorsel dosyasi secin."));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Afis okunamadi."));
+    reader.readAsDataURL(file);
+  });
+}
 
 function normalizeMovie(movie) {
   const rawGenres = movie.Tur ?? "Dram";
@@ -88,7 +166,7 @@ function normalizeMovie(movie) {
     genres,
     director: "Bilinmiyor",
     releaseDate: "2026-01-01",
-    poster: "assets/default-poster.png",
+    poster: posterForMovie(movie),
     price: 150,
     rating: "-",
   };
@@ -246,7 +324,7 @@ function home() {
     <div class="movie-grid">
       ${mock.movies.map((movie) => `
         <button class="movie-card" data-movie="${movie.id}" data-route="detail">
-          <span class="poster" style="background-image:url('${movie.poster}')"></span>
+          ${posterMarkup(movie)}
           <span class="movie-title">${escapeHtml(movie.name)}</span>
           <span class="movie-meta">${escapeHtml(movie.genres.join(", "))}</span>
           <span class="movie-meta">${movie.duration} dk</span>
@@ -286,7 +364,7 @@ function detail() {
         <button class="btn" data-route="seats" ${hasSchedule ? "" : "disabled"}>Hemen Bilet Al</button>
       </section>
       <aside class="summary-card">
-        <div class="poster" style="background-image:url('${movie.poster}')"></div>
+        ${posterMarkup(movie)}
         <h2>${escapeHtml(movie.name)}</h2>
         <p>${escapeHtml(movie.genres.join(", "))} | ${movie.duration} dk</p>
         <button class="btn" data-route="seats" ${hasSchedule ? "" : "disabled"}>Koltuk Sec</button>
@@ -414,6 +492,7 @@ function movieModal(mode = "add") {
   const isEdit = mode === "edit";
   const movie = isEdit ? state.selectedMovie : null;
   const selectedGenres = movie?.genres || [];
+  const posterPreview = isCustomPoster(state.addMoviePoster) ? state.addMoviePoster : "";
 
   return `
     <div class="modal-overlay" data-close-movie-modal>
@@ -423,6 +502,18 @@ function movieModal(mode = "add") {
           <button class="modal-close" type="button" data-close-movie-modal>&times;</button>
         </div>
         <form class="movie-form" data-movie-form data-mode="${mode}" novalidate>
+          <div class="form-field">
+            <label>Poster</label>
+            <label class="poster-upload" for="movie-poster-input">
+              <input id="movie-poster-input" class="poster-upload-input" type="file" accept="image/*" data-movie-poster-input />
+              ${posterPreview
+                ? `<img class="poster-preview-thumb" src="${posterPreview}" alt="Poster onizleme" />`
+                : `<div class="poster-upload-placeholder">
+                    <span class="poster-upload-icon">+</span>
+                    <span class="poster-upload-copy">Afis sec</span>
+                  </div>`}
+            </label>
+          </div>
           <div class="form-field">
             <label>Film Adi</label>
             <input name="name" type="text" autocomplete="off" value="${escapeHtml(movie?.name || "")}" />
@@ -991,6 +1082,7 @@ document.addEventListener("click", async (event) => {
     state.isAddMovieModalOpen = true;
     state.isEditMovieModalOpen = false;
     state.selectedMovie = null;
+    state.addMoviePoster = "";
     render();
     return;
   }
@@ -1001,6 +1093,7 @@ document.addEventListener("click", async (event) => {
     if (movie) {
       state.selectedMovie = { ...movie };
       state.isEditMovieModalOpen = true;
+      state.addMoviePoster = isCustomPoster(movie.poster) ? movie.poster : "";
       render();
     }
     return;
@@ -1018,6 +1111,7 @@ document.addEventListener("click", async (event) => {
     state.isDeleteDialogOpen = false;
     state.isAddMovieModalOpen = false;
     state.isEditMovieModalOpen = false;
+    state.addMoviePoster = "";
     render();
     return;
   }
@@ -1146,6 +1240,20 @@ document.addEventListener("input", (event) => {
 });
 
 document.addEventListener("change", (event) => {
+  const posterInput = event.target.closest("[data-movie-poster-input]");
+  if (posterInput) {
+    const [file] = posterInput.files || [];
+    readPosterAsDataUrl(file)
+      .then((poster) => {
+        state.addMoviePoster = poster;
+        render();
+      })
+      .catch((error) => {
+        showToast(error.message, "warning");
+      });
+    return;
+  }
+
   const authField = event.target.closest("[data-auth-field]");
   if (!authField) return;
 
@@ -1175,6 +1283,7 @@ document.addEventListener("submit", async (event) => {
 
   const isEdit = form.dataset.mode === "edit";
   const formData = new FormData(form);
+  const selectedPoster = state.addMoviePoster;
   const movieData = {
     FilmAd: String(formData.get("name") || "").trim(),
     Tur: [...form.querySelectorAll("[data-genre].selected")].map((tag) => tag.dataset.genre).join(", "),
@@ -1188,20 +1297,45 @@ document.addEventListener("submit", async (event) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(movieData),
       });
+      setMoviePoster(state.selectedMovie.id, selectedPoster, {
+        id: state.selectedMovie.id,
+        name: movieData.FilmAd,
+        duration: movieData.Sure,
+        genres: movieData.Tur.split(",").map((genre) => genre.trim()).filter(Boolean),
+      });
       showToast("Film basariyla guncellendi.", "success");
+      await fetchAllDataFromAPI();
     } else {
+      const previousIds = new Set(mock.movies.map((movie) => movie.id));
       const response = await fetch(`${API_BASE}/filmler`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(movieData),
       });
       if (!response.ok) throw new Error("Sunucu eklemeyi reddetti");
+      await fetchAllDataFromAPI();
+
+      if (isCustomPoster(selectedPoster)) {
+        state.localMoviePostersBySignature[movieSignatureFromParts(movieData.FilmAd, movieData.Sure, movieData.Tur)] = selectedPoster;
+        const matchingMovie = mock.movies.find((movie) =>
+          !previousIds.has(movie.id) &&
+          movie.name === movieData.FilmAd &&
+          movie.duration === movieData.Sure &&
+          movie.genres.join(", ") === movieData.Tur,
+        ) || mock.movies
+          .filter((movie) => !previousIds.has(movie.id))
+          .sort((left, right) => right.id - left.id)[0];
+
+        if (matchingMovie) setMoviePoster(matchingMovie.id, selectedPoster, matchingMovie);
+      }
+
       showToast("Film basariyla veritabanina eklendi!", "success");
     }
 
     state.isAddMovieModalOpen = false;
     state.isEditMovieModalOpen = false;
-    await fetchAllDataFromAPI();
+    state.addMoviePoster = "";
+    render();
   } catch (error) {
     console.error(error);
     showToast("Veritabanina kayit yapilamadi! SQL'i kontrol et.", "warning");
