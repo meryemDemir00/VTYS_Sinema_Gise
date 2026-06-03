@@ -11,6 +11,18 @@ const state = {
   selectedDate: "",
   selectedTime: "",
   selectedSeats: [],
+  bookingStep: "summary",
+  checkoutEndsAt: 0,
+  paymentSuccessOpen: false,
+  paymentForm: {
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    contractApproved: false,
+    marketingApproved: false,
+    error: "",
+  },
   adminTab: "Filmler",
   adminLogin: { username: "", password: "", error: "" },
   isAddMovieModalOpen: false,
@@ -264,18 +276,93 @@ function getMovie(id = state.selectedMovieId) {
   return mock.movies.find((movie) => movie.id === Number(id)) || mock.movies[0];
 }
 
+function normalizeRoute(route) {
+  return String(route || "").replace(/^#/, "") || "home";
+}
+
 function setRoute(route) {
-  window.location.hash = route;
+  const nextRoute = normalizeRoute(route);
+  if (currentRoute() === nextRoute) {
+    render();
+    return;
+  }
+
+  window.location.hash = nextRoute;
 }
 
 function currentRoute() {
-  return window.location.hash.replace("#", "") || "home";
+  return normalizeRoute(window.location.hash);
 }
 
 function currentUserLabel() {
   if (!state.currentUser) return "";
   const fullName = `${state.currentUser.ad || ""} ${state.currentUser.soyad || ""}`.trim();
   return truncateLabel(fullName || state.currentUser.email || "");
+}
+
+function resetPaymentFlow() {
+  state.bookingStep = "summary";
+  state.checkoutEndsAt = 0;
+  state.paymentSuccessOpen = false;
+  state.paymentForm = {
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    contractApproved: false,
+    marketingApproved: false,
+    error: "",
+  };
+}
+
+function paymentBreakdown(movie = getMovie()) {
+  const seatCount = Math.max(state.selectedSeats.length, 1);
+  const seatSubtotal = movie.price * seatCount;
+  const serviceFee = seatCount * 12;
+
+  return {
+    seatCount,
+    seatUnitPrice: movie.price,
+    seatSubtotal,
+    serviceFee,
+    total: seatSubtotal + serviceFee,
+  };
+}
+
+function remainingCheckoutTime() {
+  const diff = Math.max(0, state.checkoutEndsAt - Date.now());
+  const totalSeconds = Math.ceil(diff / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${pad(minutes)}:${pad(seconds)}`;
+}
+
+function openPaymentStep() {
+  state.bookingStep = "payment";
+  state.checkoutEndsAt = Date.now() + ((4 * 60) + 37) * 1000;
+  state.paymentSuccessOpen = false;
+  state.paymentForm.error = "";
+  render();
+}
+
+function completePayment() {
+  const { firstName, lastName, email, phone, contractApproved } = state.paymentForm;
+
+  if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()) {
+    state.paymentForm.error = "Lutfen tum iletisim alanlarini doldurun.";
+    render();
+    return;
+  }
+
+  if (!contractApproved) {
+    state.paymentForm.error = "Devam etmek icin onay kosullarini kabul etmelisiniz.";
+    render();
+    return;
+  }
+
+  state.paymentForm.error = "";
+  state.paymentSuccessOpen = true;
+  render();
 }
 
 function authNavMarkup() {
@@ -405,7 +492,83 @@ function seats() {
 function booking() {
   ensureScheduleSelection();
   const movie = getMovie();
-  const total = movie.price * state.selectedSeats.length;
+  const pricing = paymentBreakdown(movie);
+
+  if (state.bookingStep === "payment") {
+    const countdown = remainingCheckoutTime();
+    return layout(`
+      <section class="checkout-shell">
+        <div class="checkout-card">
+          <div class="checkout-timer-banner">
+            <span class="checkout-timer-copy">${countdown} dakika icerisinde biletini almalisin</span>
+            <strong class="checkout-timer-value">${countdown}</strong>
+          </div>
+          <div class="checkout-header">
+            <div>
+              <p class="checkout-eyebrow">Sinematör Guvenli Odeme</p>
+              <h1>Odeme Bilgileri</h1>
+            </div>
+            <div class="checkout-summary-pill">${state.selectedSeats.join(", ")} | ${formatBookingDate(state.selectedDate)} - ${state.selectedTime}</div>
+          </div>
+          <div class="checkout-movie-line">
+            <span>Film</span>
+            <strong>${escapeHtml(movie.name)}</strong>
+          </div>
+          <form class="checkout-form" data-payment-form novalidate>
+            <div class="checkout-grid-two">
+              <label class="checkout-field">
+                <span>Adin</span>
+                <input type="text" placeholder="Adinizi girin" value="${escapeHtml(state.paymentForm.firstName)}" data-payment-field="firstName" />
+              </label>
+              <label class="checkout-field">
+                <span>Soyadin *</span>
+                <input type="text" placeholder="Soyadinizi girin" value="${escapeHtml(state.paymentForm.lastName)}" data-payment-field="lastName" />
+              </label>
+            </div>
+            <label class="checkout-field">
+              <span>E-Posta Adresin</span>
+              <input type="email" placeholder="ornek@mail.com" value="${escapeHtml(state.paymentForm.email)}" data-payment-field="email" />
+            </label>
+            <label class="checkout-field">
+              <span>Cep Telefonu Numaran</span>
+              <input type="tel" placeholder="05xx xxx xx xx" value="${escapeHtml(state.paymentForm.phone)}" data-payment-field="phone" />
+            </label>
+            <div class="checkout-price-card">
+              <div class="checkout-price-head">
+                <span>Toplam:</span>
+                <strong>${pricing.total} TL</strong>
+              </div>
+              <div class="checkout-price-line">
+                <span>Koltuk Ucreti (${pricing.seatCount} x ${pricing.seatUnitPrice} TL)</span>
+                <span>${pricing.seatSubtotal} TL</span>
+              </div>
+              <div class="checkout-price-line">
+                <span>Hizmet Bedeli</span>
+                <span>${pricing.serviceFee} TL</span>
+              </div>
+            </div>
+            <div class="checkout-note">
+              Biletinizi seans saatinden 1 saat oncesine kadar web sitemiz veya mobil uygulamamiz uzerinden iade edebilirsiniz.
+            </div>
+            <label class="checkout-checkline">
+              <input type="checkbox" ${state.paymentForm.contractApproved ? "checked" : ""} data-payment-toggle="contractApproved" />
+              <span>On Bilgilendirme Kosullari'ni ve Mesafeli Satis Sozlesmesi'ni okudum, onayliyorum.</span>
+            </label>
+            <label class="checkout-checkline">
+              <input type="checkbox" ${state.paymentForm.marketingApproved ? "checked" : ""} data-payment-toggle="marketingApproved" />
+              <span>Sinematör E-Posta ve SMS gonderimleri araciligiyla on gosterimler, guncel etkinlikler ve kampanyalardan haberdar olmak istiyorum.</span>
+            </label>
+            ${state.paymentForm.error ? `<p class="checkout-error">${escapeHtml(state.paymentForm.error)}</p>` : ""}
+            <div class="checkout-actions">
+              <button class="btn secondary" type="button" data-booking-back>Rezervasyona Don</button>
+              <button class="btn checkout-submit" type="submit">Devam Et</button>
+            </div>
+          </form>
+        </div>
+      </section>
+      ${state.paymentSuccessOpen ? paymentSuccessModal() : ""}
+    `);
+  }
 
   return layout(`
     <section class="booking-card">
@@ -414,38 +577,26 @@ function booking() {
         <p>Film Adi: <strong>${escapeHtml(movie.name)}</strong></p>
         <p>Tarih ve Saat: <strong>${formatBookingDate(state.selectedDate)} - ${state.selectedTime}</strong></p>
         <p>Koltuk: <strong>${state.selectedSeats.join(", ")}</strong></p>
-        <p>Toplam: <strong>${money(total)}</strong></p>
+        <p>Toplam: <strong>${pricing.total} TL</strong></p>
       </div>
-      <button class="btn" data-route="otp">Bileti Satin Al</button>
+      <button class="btn" type="button" data-begin-payment>Bileti Satin Al</button>
     </section>
   `);
 }
 
-function otp() {
-  return layout(`
-    <section class="form-screen">
-      <div class="otp-card dark-card">
-        <h1>OTP Kodunu Girin</h1>
-        <div class="otp-inputs">
-          ${[0, 1, 2, 3].map((index) => `<input maxlength="1" inputmode="numeric" data-otp="${index}" value="${index === 0 ? "5" : ""}" />`).join("")}
+function paymentSuccessModal() {
+  return `
+    <div class="modal-overlay payment-success-overlay">
+      <section class="payment-success-modal" role="dialog" aria-modal="true" aria-label="Odeme basarili">
+        <div class="payment-success-brand">Sinematör</div>
+        <div class="payment-success-copy">
+          Sinema biletiniz tarafimizca e-posta adresinize ulasmistir.<br />
+          Iyi seyirler dileriz!
         </div>
-        <button class="btn" data-route="success">Onayla</button>
-      </div>
-    </section>
-  `, { hideAdmin: true });
-}
-
-function success() {
-  return layout(`
-    <section class="form-screen">
-      <div class="success-card dark-card">
-        <div class="success-mark">&check;</div>
-        <h1>Odeme Basarili</h1>
-        <button class="btn" data-route="home">Yeni Bilet Al</button>
-        <button class="btn secondary" data-route="home">Ana Sayfaya Don</button>
-      </div>
-    </section>
-  `, { hideAdmin: true });
+        <button class="btn payment-success-button" type="button" data-close-payment-success>Tamam</button>
+      </section>
+    </div>
+  `;
 }
 
 function adminLogin() {
@@ -691,7 +842,7 @@ function authModal() {
               </label>
               ${authFieldError(register.fieldErrors, "kvkkOnay")}
               ${fakeRecaptcha(register.recaptcha, "registerRecaptcha")}
-              <button type="button" class="auth-submit-btn" data-auth-submit="register" ${register.loading ? "disabled" : ""}>${register.loading ? "Kayit Yapiliyor..." : "Sinemator Uyesi Ol"}</button>
+              <button type="button" class="auth-submit-btn" data-auth-submit="register" ${register.loading ? "disabled" : ""}>${register.loading ? "Kayit Yapiliyor..." : "Sinematör Uyesi Ol"}</button>
               ${register.error ? `<p class="auth-submit-error">${escapeHtml(register.error)}</p>` : ""}
             </div>
           `}
@@ -985,8 +1136,6 @@ function render() {
     detail,
     seats,
     booking,
-    otp,
-    success,
     "admin-login": adminLogin,
     admin,
     movies: home,
@@ -1022,6 +1171,25 @@ async function fetchAllDataFromAPI() {
 }
 
 document.addEventListener("click", async (event) => {
+  if (event.target.closest("[data-begin-payment]")) {
+    openPaymentStep();
+    return;
+  }
+
+  if (event.target.closest("[data-booking-back]")) {
+    state.bookingStep = "summary";
+    state.paymentSuccessOpen = false;
+    state.paymentForm.error = "";
+    render();
+    return;
+  }
+
+  if (event.target.closest("[data-close-payment-success]")) {
+    state.paymentSuccessOpen = false;
+    render();
+    return;
+  }
+
   if (event.target.closest("[data-open-auth-modal]")) {
     openAuthModal("login");
     return;
@@ -1147,38 +1315,8 @@ document.addEventListener("click", async (event) => {
   if (routeButton && !routeButton.disabled) {
     const targetRoute = routeButton.dataset.route;
 
-    if (targetRoute === "success" && state.selectedSeats.length > 0) {
-      routeButton.disabled = true;
-      routeButton.textContent = "Biletler Kesiliyor...";
-
-      try {
-        let actualSessionId = 1;
-        const selectedSession = mock.sessions.find((session) => session.FilmID === state.selectedMovieId);
-        if (selectedSession) actualSessionId = selectedSession.SeansID;
-
-        for (const seat of state.selectedSeats) {
-          await fetch(`${API_BASE}/biletler`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              SeansID: actualSessionId,
-              MusteriID: 1,
-              KoltukNo: seat,
-            }),
-          });
-        }
-
-        await fetchAllDataFromAPI();
-        state.selectedSeats.forEach((seat) => takenSeats.add(seat));
-        state.selectedSeats = [];
-        showToast("Biletiniz basariyla olusturuldu!", "success");
-        setRoute("success");
-      } catch (error) {
-        showToast("Odeme alinirken hata olustu!", "warning");
-        routeButton.disabled = false;
-        routeButton.textContent = "Onayla";
-      }
-      return;
+    if (targetRoute === "booking") {
+      resetPaymentFlow();
     }
 
     setRoute(targetRoute);
@@ -1220,6 +1358,13 @@ document.addEventListener("input", (event) => {
     return;
   }
 
+  const paymentField = event.target.closest("[data-payment-field]");
+  if (paymentField) {
+    state.paymentForm[paymentField.dataset.paymentField] = paymentField.value;
+    state.paymentForm.error = "";
+    return;
+  }
+
   const authField = event.target.closest("[data-auth-field]");
   if (!authField) return;
 
@@ -1254,6 +1399,14 @@ document.addEventListener("change", (event) => {
     return;
   }
 
+  const paymentToggle = event.target.closest("[data-payment-toggle]");
+  if (paymentToggle) {
+    state.paymentForm[paymentToggle.dataset.paymentToggle] = paymentToggle.checked;
+    state.paymentForm.error = "";
+    render();
+    return;
+  }
+
   const authField = event.target.closest("[data-auth-field]");
   if (!authField) return;
 
@@ -1266,6 +1419,11 @@ document.addEventListener("change", (event) => {
 
 document.addEventListener("submit", async (event) => {
   event.preventDefault();
+
+  if (event.target.closest("[data-payment-form]")) {
+    completePayment();
+    return;
+  }
 
   if (event.target.closest("[data-admin-login-form]")) {
     if (state.adminLogin.username === "admin" && state.adminLogin.password === "admin123") {
@@ -1342,5 +1500,17 @@ document.addEventListener("submit", async (event) => {
   }
 });
 
+window.addEventListener("hashchange", render);
+window.setInterval(() => {
+  if (currentRoute() === "booking" && state.bookingStep === "payment" && state.checkoutEndsAt) {
+    render();
+  }
+}, 1000);
+
 restoreAuthState();
+if (!window.location.hash) {
+  window.location.hash = "home";
+} else {
+  render();
+}
 fetchAllDataFromAPI();
