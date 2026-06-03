@@ -58,7 +58,7 @@ button {
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0;
   color: var(--white);
   background: transparent;
   font-weight: 800;
@@ -68,10 +68,18 @@ button {
 }
 
 .brand-logo {
-  width: 74px;
-  height: 42px;
+  height: 115px;
+  width: auto;
   object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 8px;
   filter: drop-shadow(0 0 18px rgba(124, 58, 237, 0.38));
+}
+
+.brand-text {
+  font-size: 28px;
+  font-weight: 700;
 }
 
 .brand-mark {
