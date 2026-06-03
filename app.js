@@ -605,6 +605,7 @@ document.addEventListener("submit", async (event) => {
   const isEdit = form.dataset.mode === "edit";
   const formData = new FormData(form);
   
+  // Veritabanı kolon isimlerimiz: FilmAd, Tur, Sure
   const movieData = {
     FilmAd: String(formData.get("name") || "").trim(),
     Tur: [...form.querySelectorAll("[data-genre].selected")].map((t) => t.dataset.genre).join(", "),
@@ -613,31 +614,35 @@ document.addEventListener("submit", async (event) => {
 
   try {
     if (isEdit) {
+      // Düzenleme (PUT)
       await fetch(`${API_BASE}/filmler/${state.selectedMovie.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(movieData)
       });
-      showToast("Film güncellendi.", "success");
+      showToast("Film başarıyla güncellendi.", "success");
     } else {
-      await fetch(`${API_BASE}/filmler`, {
+      // YENİ EKLEME (POST)
+      const response = await fetch(`${API_BASE}/filmler`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(movieData)
       });
-      showToast("Film başarıyla eklendi.", "success");
+      
+      if (!response.ok) throw new Error("Sunucu eklemeyi reddetti");
+      showToast("Film başarıyla veritabanına eklendi!", "success");
     }
 
+    // Modal'ı kapat ve listeyi API'den tekrar çek
     state.isAddMovieModalOpen = false;
     state.isEditMovieModalOpen = false;
     await fetchAllDataFromAPI(); 
 
   } catch (err) {
-    showToast("Kaydetme işlemi başarısız!", "warning");
+    console.error(err);
+    showToast("Veritabanına kayıt yapılamadı! SQL'i kontrol et.", "warning");
   }
 });
-
-window.addEventListener("hashchange", render);
 
 // Uygulamayı Başlat (Tüm Tabloları Çek)
 fetchAllDataFromAPI();
