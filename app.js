@@ -226,8 +226,8 @@ function layout(content, options = {}) {
     <section class="screen">
       <header class="topbar">
         <button class="brand" data-route="home" aria-label="Ana sayfa">
-          <img class="brand-logo" src="assets/Bilet_in.png" alt="Bilet.in" onerror="this.remove()" />
-          <span class="brand-mark"></span><span>Bilet.in</span>
+          <img class="brand-logo" src="/sinematör-logo.png" alt="sinematör" onerror="this.remove()" />
+          <span class="brand-text">SİNEMATÖR</span>
         </button>
         <nav class="nav-actions">${nav}</nav>
       </header>

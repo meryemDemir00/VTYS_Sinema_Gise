@@ -61,6 +61,22 @@ app.post("/api/auth/register", async (req, res) => {
     res.status(statusCode).json(authErrorPayload(error, "Kayit olusturulamadi."));
   }
 });
+// Patron için Hasılat Raporu Rotası
+app.get('/api/rapor/hasilat', async (req, res) => {
+    try {
+        // Veritabanına bağlan (config değişkenin önceden tanımlıysa direkt kullanır)
+        const pool = await sql.connect(config); 
+        
+        // Uzun SQL kodları yazmak yerine sadece Stored Procedure'ü tetikliyoruz (EXEC)
+        const result = await pool.request().query('EXEC sp_FilmHasilatRaporu');
+        
+        // Gelen tabloyu JSON formatında dışarı aktarıyoruz
+        res.json(result.recordset);
+    } catch (err) {
+        console.error("Rapor hatası:", err);
+        res.status(500).send("Sunucu Hatası: Rapor getirilemedi.");
+    }
+});
 
 app.post("/api/auth/login", async (req, res) => {
   try {
