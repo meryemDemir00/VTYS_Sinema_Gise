@@ -856,7 +856,7 @@ function paymentSuccessModal() {
       <section class="payment-success-modal" role="dialog" aria-modal="true" aria-label="Odeme basarili">
         <img
           class="payment-success-image"
-          src="/S%C4%B0NEMAT%C3%96Rbiti%C5%9Fekran.png"
+          src="/sinematorbitis.png"
           alt="Biletiniz e-posta olarak tarafiniza iletilmistir. Bizi tercih ettiginiz icin tesekkurler."
         />
         ${ticket ? `
@@ -868,7 +868,6 @@ function paymentSuccessModal() {
               <span>${escapeHtml(ticket.tarih)} - ${escapeHtml(ticket.saat)}</span>
               <span>Koltuk: ${escapeHtml(ticket.koltuklar)}</span>
               <span>E-posta: ${escapeHtml(ticket.email)}</span>
-              <span class="ticket-url">${escapeHtml(ticket.qrUrl)}</span>
             </div>
             <img class="ticket-qr" src="${ticket.qrCode}" alt="Bilet QR kodu" />
           </div>

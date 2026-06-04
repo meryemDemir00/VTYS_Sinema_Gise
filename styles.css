@@ -1014,13 +1014,6 @@ button {
   font-size: 22px;
 }
 
-.ticket-url {
-  max-width: 480px;
-  color: #c4b5fd;
-  font-size: 11px;
-  overflow-wrap: anywhere;
-}
-
 .ticket-qr {
   width: 116px;
   height: 116px;
