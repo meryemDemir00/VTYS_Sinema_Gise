@@ -308,7 +308,11 @@ function setRoute(route) {
 }
 
 function currentRoute() {
-  return normalizeRoute(window.location.hash);
+  return normalizeRoute(window.location.hash.split("?")[0]);
+}
+
+function navigate(route) {
+  setRoute(route);
 }
 
 function currentUserLabel() {
@@ -443,7 +447,7 @@ function updateCheckoutTimerDisplay() {
 
 function closePaymentSuccess() {
   resetPaymentFlow();
-  setRoute("home");
+  navigate("home");
 }
 
 function validatePaymentEmail(value) {
@@ -582,7 +586,7 @@ async function completePayment() {
     state.paymentForm.emailError = "";
     state.paymentForm.emailStatus = "valid";
     state.paymentSuccessOpen = true;
-    render();
+    navigate("ticket-success");
   } catch (error) {
     state.paymentForm.error = error?.message || "Bilet satisi tamamlanamadi. Lutfen tekrar deneyin.";
     render();
@@ -828,6 +832,19 @@ function booking() {
         <p>Toplam: <strong>${pricing.total} TL</strong></p>
       </div>
       <button class="btn" type="button" data-begin-payment>Bileti Satin Al</button>
+    </section>
+  `);
+}
+
+function ticketSuccess() {
+  if (!state.paymentSuccessTicket) {
+    navigate("home");
+    return "";
+  }
+
+  return layout(`
+    <section class="payment-success-route">
+      ${paymentSuccessModal()}
     </section>
   `);
 }
@@ -1402,6 +1419,7 @@ function render() {
     detail,
     seats,
     booking,
+    "ticket-success": ticketSuccess,
     "admin-login": adminLogin,
     admin,
     movies: home,
@@ -1498,8 +1516,7 @@ document.addEventListener("click", async (event) => {
   }
 
   if (event.target.closest("[data-close-payment-success]")) {
-    state.paymentSuccessOpen = false;
-    window.location.href = "/";
+    closePaymentSuccess();
     return;
   }
 
