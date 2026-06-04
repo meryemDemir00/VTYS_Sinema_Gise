@@ -968,6 +968,7 @@ button {
 .payment-success-modal {
   width: auto;
   height: auto;
+  max-height: calc(100vh - 48px);
   margin: 0;
   padding: 0;
   border: 0;
@@ -976,7 +977,7 @@ button {
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  overflow: visible;
+  overflow: auto;
   background: none;
   box-shadow: none;
 }
@@ -1027,6 +1028,13 @@ button {
   background: #ffffff;
 }
 
+.payment-success-actions {
+  width: 700px;
+  max-width: 90vw;
+  display: flex;
+  justify-content: center;
+}
+
 .payment-success-button {
   position: static;
   transform: none;
@@ -1034,18 +1042,14 @@ button {
   min-height: 44px;
   border-radius: 999px;
   color: #ffffff;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08)),
-    #9a45cb;
+  background: #7b2fbe;
   border: 1px solid rgba(245, 240, 208, 0.34);
   box-shadow: 0 12px 28px rgba(43, 10, 72, 0.32);
 }
 
 .payment-success-button:hover {
   transform: translateY(-1px);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.12)),
-    #b855d2;
+  background: #8e42cc;
   box-shadow: 0 16px 34px rgba(43, 10, 72, 0.4);
 }
 

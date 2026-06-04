@@ -856,7 +856,9 @@ function paymentSuccessModal() {
             <img class="ticket-qr" src="${ticket.qrCode}" alt="Bilet QR kodu" />
           </div>
         ` : ""}
-        <button class="btn payment-success-button" type="button" data-close-payment-success>Tamam</button>
+        <div class="payment-success-actions">
+          <button class="btn payment-success-button" type="button" data-close-payment-success>Tamam</button>
+        </div>
       </section>
     </div>
   `;
