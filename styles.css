@@ -729,6 +729,14 @@ button {
   font-weight: 700;
 }
 
+.checkout-payment-error {
+  padding: 14px 16px;
+  border-radius: 12px;
+  color: #fed7aa;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(249, 115, 22, 0.1));
+  border: 1px solid rgba(251, 146, 60, 0.34);
+}
+
 .checkout-actions {
   display: flex;
   justify-content: space-between;
@@ -960,6 +968,7 @@ button {
 .payment-success-modal {
   width: auto;
   height: auto;
+  max-height: calc(100vh - 48px);
   margin: 0;
   padding: 0;
   border: 0;
@@ -968,7 +977,7 @@ button {
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  overflow: visible;
+  overflow: auto;
   background: none;
   box-shadow: none;
 }
@@ -981,6 +990,44 @@ button {
   border-radius: 16px;
 }
 
+.ticket-success-card {
+  width: 700px;
+  max-width: 90vw;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px;
+  border-radius: 16px;
+  color: #ffffff;
+  background: rgba(17, 17, 26, 0.92);
+  border: 1px solid rgba(245, 240, 208, 0.2);
+}
+
+.ticket-success-details {
+  display: grid;
+  gap: 5px;
+  font-size: 14px;
+}
+
+.ticket-success-details strong {
+  font-size: 22px;
+}
+
+.ticket-qr {
+  width: 116px;
+  height: 116px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.payment-success-actions {
+  width: 700px;
+  max-width: 90vw;
+  display: flex;
+  justify-content: center;
+}
+
 .payment-success-button {
   position: static;
   transform: none;
@@ -988,18 +1035,14 @@ button {
   min-height: 44px;
   border-radius: 999px;
   color: #ffffff;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08)),
-    #9a45cb;
+  background: #7b2fbe;
   border: 1px solid rgba(245, 240, 208, 0.34);
   box-shadow: 0 12px 28px rgba(43, 10, 72, 0.32);
 }
 
 .payment-success-button:hover {
   transform: translateY(-1px);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.12)),
-    #b855d2;
+  background: #8e42cc;
   box-shadow: 0 16px 34px rgba(43, 10, 72, 0.4);
 }
 
@@ -1549,6 +1592,11 @@ button {
   .seat-legend {
     flex-wrap: wrap;
     gap: 10px;
+  }
+
+  .ticket-success-card {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .admin-sidebar {
