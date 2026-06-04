@@ -563,6 +563,11 @@ function seats() {
         </div>
         <div class="screen-bar">PERDE</div>
       </div>
+      <div class="seat-legend" aria-label="Koltuk durumlari">
+        <span class="legend-item"><span class="legend-swatch legend-taken"></span>Dolu</span>
+        <span class="legend-item"><span class="legend-swatch legend-empty"></span>Bo&#351;</span>
+        <span class="legend-item"><span class="legend-swatch legend-selected"></span>Se&#231;ili</span>
+      </div>
       <div class="payment-strip">
         <div><span class="tiny-label">Koltuk</span><div>${state.selectedSeats.length ? state.selectedSeats.join(", ") : "Koltuk secin"}</div></div>
         <div><span class="tiny-label">Toplam Odeme</span><div class="pay-value">${money(total)}</div></div>
