@@ -42,25 +42,97 @@ function authErrorPayload(error, fallbackMessage) {
   };
 }
 
+// --- KULLANICI KAYIT OL (REGISTER) SQL BAĞLANTISI ---
 app.post("/api/auth/register", async (req, res) => {
   try {
-    const { ad, soyad, email, telefon, dogumTarihi, cinsiyet, sifre } = req.body || {};
-    const createdUser = await db.createUser({ ad, soyad, email, telefon, dogumTarihi, cinsiyet, sifre });
+    const { ad, soyad, email, telefon, sifre } = req.body || {};
+    const pool = await sql.connect(config);
 
+    // 1. Bu e-posta veya telefonla zaten kayıt var mı kontrol et
+    const checkUser = await pool.request()
+      .input("Email", sql.NVarChar, email)
+      .input("Telefon", sql.NVarChar, telefon)
+      .query("SELECT * FROM Musteriler WHERE Email = @Email OR Telefon = @Telefon");
+
+    if (checkUser.recordset.length > 0) {
+      return res.status(400).json(authErrorPayload(null, "Bu e-posta veya telefon zaten kayıtlı!"));
+    }
+
+    // 2. Yeni kullanıcıyı SQL'e kaydet
+    const insertResult = await pool.request()
+      .input("Ad", sql.NVarChar, ad)
+      .input("Soyad", sql.NVarChar, soyad)
+      .input("Email", sql.NVarChar, email)
+      .input("Telefon", sql.NVarChar, telefon)
+      .input("Sifre", sql.NVarChar, sifre) // Gerçek projelerde şifreler bcrypt ile şifrelenerek saklanır
+      .query(`
+        INSERT INTO Musteriler (Ad, Soyad, Email, Telefon, Sifre)
+        OUTPUT INSERTED.*
+        VALUES (@Ad, @Soyad, @Email, @Telefon, @Sifre)
+      `);
+
+    const createdUser = insertResult.recordset[0];
+
+    // 3. Başarılı mesajı dön
     res.status(201).json({
       success: true,
       user: {
-        id: createdUser.id,
-        ad: createdUser.ad,
-        soyad: createdUser.soyad,
-        email: createdUser.email,
+        id: createdUser.MusteriID,
+        ad: createdUser.Ad,
+        soyad: createdUser.Soyad,
+        email: createdUser.Email,
       },
     });
   } catch (error) {
-    const statusCode = error?.statusCode === 400 ? 400 : 500;
-    res.status(statusCode).json(authErrorPayload(error, "Kayit olusturulamadi."));
+    console.error("Kayıt Hatası:", error);
+    res.status(500).json(authErrorPayload(error, "Kayıt oluşturulamadı."));
   }
 });
+
+
+// --- KULLANICI GİRİŞ YAP (LOGIN) SQL BAĞLANTISI ---
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { identifier, sifre } = req.body || {};
+    const pool = await sql.connect(config);
+
+    // 1. E-posta veya Telefon numarasını ve şifreyi SQL'de ara
+    const result = await pool.request()
+      .input("Identifier", sql.NVarChar, identifier)
+      .input("Sifre", sql.NVarChar, sifre)
+      .query(`
+        SELECT * FROM Musteriler 
+        WHERE (Email = @Identifier OR Telefon = @Identifier) 
+        AND Sifre = @Sifre
+      `);
+
+    const user = result.recordset[0];
+
+    // 2. Kullanıcı bulunamadıysa hata ver
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "E-posta/telefon veya şifre hatalı.",
+      });
+    }
+
+    // 3. Giriş başarılıysa Tarayıcıya Token (Kimlik) ver
+    setAuthCookie(res, createAuthToken(user));
+    res.json({
+      success: true,
+      user: {
+        id: user.MusteriID,
+        ad: user.Ad,
+        soyad: user.Soyad,
+        email: user.Email,
+      },
+    });
+  } catch (error) {
+    console.error("Giriş Hatası:", error);
+    res.status(500).json(authErrorPayload(error, "Sunucu bağlantı hatası."));
+  }
+});
+
 // Patron için Hasılat Raporu Rotası
 app.get('/api/rapor/hasilat', async (req, res) => {
     try {
@@ -76,42 +148,6 @@ app.get('/api/rapor/hasilat', async (req, res) => {
         console.error("Rapor hatası:", err);
         res.status(500).send("Sunucu Hatası: Rapor getirilemedi.");
     }
-});
-
-app.post("/api/auth/login", async (req, res) => {
-  try {
-    const { identifier, sifre } = req.body || {};
-    const user = await db.findUserByIdentifier(identifier, sifre);
-
-    if (!user) {
-      res.status(401).json({
-        success: false,
-        message: "E-posta/telefon veya sifre hatali.",
-      });
-      return;
-    }
-
-    setAuthCookie(res, createAuthToken(user));
-    res.json({
-      success: true,
-      user: {
-        id: user.id,
-        ad: user.ad,
-        soyad: user.soyad,
-        email: user.email,
-      },
-    });
-  } catch (error) {
-    if (error?.statusCode === 401) {
-      res.status(401).json({
-        success: false,
-        message: "E-posta/telefon veya sifre hatali.",
-      });
-      return;
-    }
-
-    res.status(error?.statusCode || 500).json(authErrorPayload(error, "Giris yapilamadi."));
-  }
 });
 
 app.post("/api/auth/logout", async (_req, res) => {
@@ -166,15 +202,38 @@ app.put("/api/filmler/:id", async (req, res) => {
 });
 
 app.delete("/api/filmler/:id", async (req, res) => {
+  // 1. AJAN: İstek sunucuya gerçekten ulaşıyor mu ve ID doğru mu geliyor?
+  console.log("🚨 SİLME İSTEĞİ GELDİ! Gelen Film ID:", req.params.id);
+
   try {
     const pool = await sql.connect(config);
-    await pool.request()
-      .input("FilmID", sql.Int, req.params.id)
-      .query("DELETE FROM Filmler WHERE FilmID = @FilmID");
+    const filmId = req.params.id;
 
-    res.send("Film silindi.");
+    // BİLETLERİ SİL VE RAPORLA
+    const biletSonuc = await pool.request()
+      .input("FilmID", sql.Int, filmId)
+      .query(`
+        DELETE FROM Biletler 
+        WHERE SeansID IN (SELECT SeansID FROM Seanslar WHERE FilmID = @FilmID)
+      `);
+    console.log("🗑️ Etkilenen (Silinen) Bilet Sayısı:", biletSonuc.rowsAffected[0]);
+
+    // SEANSLARI SİL VE RAPORLA
+    const seansSonuc = await pool.request()
+      .input("FilmID", sql.Int, filmId)
+      .query("DELETE FROM Seanslar WHERE FilmID = @FilmID");
+    console.log("🗑️ Etkilenen (Silinen) Seans Sayısı:", seansSonuc.rowsAffected[0]);
+
+    // FİLMİ SİL VE RAPORLA
+    const filmSonuc = await pool.request()
+      .input("FilmID", sql.Int, filmId)
+      .query("DELETE FROM Filmler WHERE FilmID = @FilmID");
+    console.log("🎬 Etkilenen (Silinen) Film Sayısı:", filmSonuc.rowsAffected[0]);
+
+    res.status(200).send("İşlem tamamlandı.");
   } catch (error) {
-    res.status(500).send("Film silinirken hata olustu.");
+    console.error("🚨 SİLME İŞLEMİNDE PATLAMA YAŞANDI:", error);
+    res.status(500).send("Sunucu hatası.");
   }
 });
 
