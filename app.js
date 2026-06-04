@@ -14,15 +14,7 @@ const state = {
   bookingStep: "summary",
   checkoutEndsAt: 0,
   paymentSuccessOpen: false,
-  paymentForm: {
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    contractApproved: false,
-    marketingApproved: false,
-    error: "",
-  },
+  paymentForm: createInitialPaymentForm(),
   adminTab: "Filmler",
   adminLogin: { username: "", password: "", error: "" },
   isAddMovieModalOpen: false,
@@ -83,12 +75,30 @@ const authStorageKeys = {
   persistent: "biletin_auth_user",
   session: "biletin_auth_user_session",
 };
+const posterStorageKeys = {
+  byId: "sinemator_movie_posters_by_id",
+  bySignature: "sinemator_movie_posters_by_signature",
+};
 const today = new Date();
 const yearOptions = Array.from({ length: 90 }, (_, index) => String(today.getFullYear() - index));
 const dayOptions = Array.from({ length: 31 }, (_, index) => String(index + 1).padStart(2, "0"));
 
 const API_BASE = "http://localhost:3000/api";
 const defaultPosterImage = "assets/default-poster.png";
+
+function createInitialPaymentForm() {
+  return {
+    firstName: "",
+    lastName: "",
+    email: "",
+    emailError: "",
+    emailStatus: "",
+    phone: "",
+    contractApproved: false,
+    marketingApproved: false,
+    error: "",
+  };
+}
 
 function isCustomPoster(poster) {
   return Boolean(poster && poster !== defaultPosterImage);
@@ -127,6 +137,8 @@ function setMoviePoster(movieId, poster, movieLike = null) {
   if (movie) {
     movie.poster = isCustomPoster(poster) ? poster : defaultPosterImage;
   }
+
+  persistLocalMoviePosters();
 }
 
 function posterForMovie(movieLike) {
@@ -304,15 +316,76 @@ function resetPaymentFlow() {
   state.bookingStep = "summary";
   state.checkoutEndsAt = 0;
   state.paymentSuccessOpen = false;
-  state.paymentForm = {
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    contractApproved: false,
-    marketingApproved: false,
-    error: "",
+  state.paymentForm = createInitialPaymentForm();
+}
+
+function clearPaymentErrorMessage() {
+  const paymentError = app.querySelector(".checkout-error:not(.checkout-email-error)");
+  if (paymentError) paymentError.remove();
+}
+
+function activePaymentFieldSnapshot() {
+  const activeField = document.activeElement?.closest?.("[data-payment-field]");
+  if (!activeField) return null;
+
+  return {
+    field: activeField.dataset.paymentField,
+    selectionStart: activeField.selectionStart,
+    selectionEnd: activeField.selectionEnd,
   };
+}
+
+function restorePaymentFieldSnapshot(snapshot) {
+  if (!snapshot) return;
+
+  const field = app.querySelector(`[data-payment-field="${snapshot.field}"]`);
+  if (!field) return;
+
+  field.focus({ preventScroll: true });
+  if (typeof snapshot.selectionStart === "number" && typeof snapshot.selectionEnd === "number") {
+    field.setSelectionRange(snapshot.selectionStart, snapshot.selectionEnd);
+  }
+}
+
+function isPaymentFieldFocused() {
+  return Boolean(document.activeElement?.closest?.("[data-payment-field]"));
+}
+
+function updateCheckoutTimerDisplay() {
+  const countdown = remainingCheckoutTime();
+  const copy = app.querySelector(".checkout-timer-copy");
+  const value = app.querySelector(".checkout-timer-value");
+
+  if (copy) copy.textContent = `${countdown} dakika icerisinde biletini almalisin`;
+  if (value) value.textContent = countdown;
+}
+
+function closePaymentSuccess() {
+  resetPaymentFlow();
+  setRoute("home");
+}
+
+function validatePaymentEmail(value) {
+  const email = String(value || "").trim();
+  if (!email.includes("@")) return "Geçerli bir e-posta adresi girin";
+  if (!/^[^\s@]+@(gmail\.com|hotmail\.com|outlook\.com|yahoo\.com)$/i.test(email)) {
+    return "Lütfen Gmail, Hotmail, Outlook veya Yahoo e-posta adresinizi girin";
+  }
+
+  return "";
+}
+
+function validatePaymentEmailField(value) {
+  const trimmedValue = String(value || "").trim();
+  if (!trimmedValue) {
+    state.paymentForm.emailError = "";
+    state.paymentForm.emailStatus = "";
+    return;
+  }
+
+  const emailError = validatePaymentEmail(trimmedValue);
+  state.paymentForm.emailError = emailError;
+  state.paymentForm.emailStatus = emailError ? "invalid" : "valid";
 }
 
 function paymentBreakdown(movie = getMovie()) {
@@ -347,9 +420,18 @@ function openPaymentStep() {
 
 function completePayment() {
   const { firstName, lastName, email, phone, contractApproved } = state.paymentForm;
+  const emailError = validatePaymentEmail(email);
 
   if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()) {
     state.paymentForm.error = "Lutfen tum iletisim alanlarini doldurun.";
+    render();
+    return;
+  }
+
+  if (emailError) {
+    state.paymentForm.emailError = emailError;
+    state.paymentForm.emailStatus = "invalid";
+    state.paymentForm.error = "";
     render();
     return;
   }
@@ -361,6 +443,8 @@ function completePayment() {
   }
 
   state.paymentForm.error = "";
+  state.paymentForm.emailError = "";
+  state.paymentForm.emailStatus = "valid";
   state.paymentSuccessOpen = true;
   render();
 }
@@ -525,13 +609,14 @@ function booking() {
                 <input type="text" placeholder="Soyadinizi girin" value="${escapeHtml(state.paymentForm.lastName)}" data-payment-field="lastName" />
               </label>
             </div>
-            <label class="checkout-field">
+            <label class="checkout-field checkout-email-field" dir="ltr">
               <span>E-Posta Adresin</span>
-              <input type="email" placeholder="ornek@mail.com" value="${escapeHtml(state.paymentForm.email)}" data-payment-field="email" />
+              <input class="checkout-email-input ${state.paymentForm.emailStatus === "invalid" ? "is-invalid" : ""} ${state.paymentForm.emailStatus === "valid" ? "is-valid" : ""}" type="email" dir="ltr" placeholder="ornek@mail.com" value="${escapeHtml(state.paymentForm.email)}" data-payment-field="email" />
+              ${state.paymentForm.emailError ? `<p class="checkout-error checkout-email-error">${escapeHtml(state.paymentForm.emailError)}</p>` : ""}
             </label>
             <label class="checkout-field">
               <span>Cep Telefonu Numaran</span>
-              <input type="tel" placeholder="05xx xxx xx xx" value="${escapeHtml(state.paymentForm.phone)}" data-payment-field="phone" />
+              <input type="tel" placeholder="05xx xxx xx xx" value="${escapeHtml(state.paymentForm.phone)}" data-payment-field="phone" maxlength="11" inputmode="numeric" />
             </label>
             <div class="checkout-price-card">
               <div class="checkout-price-head">
@@ -1131,6 +1216,7 @@ async function logoutUser() {
 }
 
 function render() {
+  const paymentFieldSnapshot = activePaymentFieldSnapshot();
   const routes = {
     home,
     detail,
@@ -1142,31 +1228,78 @@ function render() {
   };
 
   app.innerHTML = `${(routes[currentRoute()] || home)()}${state.isAuthModalOpen ? authModal() : ""}`;
+  restorePaymentFieldSnapshot(paymentFieldSnapshot);
 }
 
 async function fetchAllDataFromAPI() {
   try {
-    const [moviesRes, hallsRes, customersRes, sessionsRes, ticketsRes] = await Promise.all([
-      fetch(`${API_BASE}/filmler`),
-      fetch(`${API_BASE}/salonlar`),
-      fetch(`${API_BASE}/musteriler`),
-      fetch(`${API_BASE}/seanslar`),
-      fetch(`${API_BASE}/biletler`),
-    ]);
-
-    const moviesData = await moviesRes.json();
-    mock.movies = moviesData.map((film) => normalizeMovie(film));
-    if (!state.selectedMovieId && mock.movies.length > 0) state.selectedMovieId = mock.movies[0].id;
-
-    mock.halls = await hallsRes.json();
-    mock.customers = await customersRes.json();
-    mock.sessions = await sessionsRes.json();
-    mock.tickets = await ticketsRes.json();
-
+    await fetchMoviesFromAPI();
+    render();
+    await fetchSupplementalDataFromAPI();
     render();
   } catch (error) {
     console.error("Veriler cekilemedi:", error);
     showToast("Veritabani baglantisi kurulamadi! Sunucuyu kontrol et.", "warning");
+  }
+}
+
+async function fetchMoviesFromAPI() {
+  const moviesRes = await fetch(`${API_BASE}/filmler`);
+  if (!moviesRes.ok) throw new Error("Filmler getirilemedi.");
+
+  const moviesData = await moviesRes.json();
+  mock.movies = moviesData.map((film) => normalizeMovie(film));
+
+  if (!mock.movies.some((movie) => movie.id === Number(state.selectedMovieId))) {
+    state.selectedMovieId = mock.movies[0]?.id ?? null;
+  }
+}
+
+async function fetchSupplementalDataFromAPI() {
+  const resources = [
+    { key: "halls", url: `${API_BASE}/salonlar`, label: "Salonlar" },
+    { key: "customers", url: `${API_BASE}/musteriler`, label: "Musteriler" },
+    { key: "sessions", url: `${API_BASE}/seanslar`, label: "Seanslar" },
+    { key: "tickets", url: `${API_BASE}/biletler`, label: "Biletler" },
+  ];
+
+  const results = await Promise.allSettled(resources.map(async (resource) => {
+    const response = await fetch(resource.url);
+    if (!response.ok) throw new Error(`${resource.label} getirilemedi.`);
+    return {
+      key: resource.key,
+      data: await response.json(),
+    };
+  }));
+
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      mock[result.value.key] = result.value.data;
+      return;
+    }
+
+    console.warn(resources[index].label, result.reason);
+  });
+}
+
+function persistLocalMoviePosters() {
+  localStorage.setItem(posterStorageKeys.byId, JSON.stringify(state.localMoviePosters));
+  localStorage.setItem(posterStorageKeys.bySignature, JSON.stringify(state.localMoviePostersBySignature));
+}
+
+function restoreLocalMoviePosters() {
+  try {
+    state.localMoviePosters = JSON.parse(localStorage.getItem(posterStorageKeys.byId) || "{}");
+  } catch {
+    state.localMoviePosters = {};
+    localStorage.removeItem(posterStorageKeys.byId);
+  }
+
+  try {
+    state.localMoviePostersBySignature = JSON.parse(localStorage.getItem(posterStorageKeys.bySignature) || "{}");
+  } catch {
+    state.localMoviePostersBySignature = {};
+    localStorage.removeItem(posterStorageKeys.bySignature);
   }
 }
 
@@ -1185,8 +1318,7 @@ document.addEventListener("click", async (event) => {
   }
 
   if (event.target.closest("[data-close-payment-success]")) {
-    state.paymentSuccessOpen = false;
-    render();
+    closePaymentSuccess();
     return;
   }
 
@@ -1360,8 +1492,25 @@ document.addEventListener("input", (event) => {
 
   const paymentField = event.target.closest("[data-payment-field]");
   if (paymentField) {
-    state.paymentForm[paymentField.dataset.paymentField] = paymentField.value;
-    state.paymentForm.error = "";
+    const fieldName = paymentField.dataset.paymentField;
+    const nextValue = fieldName === "phone"
+      ? paymentField.value.replace(/[^0-9]/g, "").slice(0, 11)
+      : paymentField.value;
+
+    if (paymentField.value !== nextValue) {
+      paymentField.value = nextValue;
+    }
+
+    state.paymentForm[fieldName] = nextValue;
+    if (fieldName === "email") {
+      state.paymentForm.emailError = "";
+      state.paymentForm.emailStatus = "";
+    }
+
+    if (state.paymentForm.error) {
+      state.paymentForm.error = "";
+      clearPaymentErrorMessage();
+    }
     return;
   }
 
@@ -1417,6 +1566,14 @@ document.addEventListener("change", (event) => {
   }
 });
 
+document.addEventListener("focusout", (event) => {
+  const paymentField = event.target.closest("[data-payment-field]");
+  if (!paymentField || paymentField.dataset.paymentField !== "email") return;
+
+  validatePaymentEmailField(paymentField.value);
+  render();
+});
+
 document.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -1464,28 +1621,19 @@ document.addEventListener("submit", async (event) => {
       showToast("Film basariyla guncellendi.", "success");
       await fetchAllDataFromAPI();
     } else {
-      const previousIds = new Set(mock.movies.map((movie) => movie.id));
       const response = await fetch(`${API_BASE}/filmler`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(movieData),
       });
       if (!response.ok) throw new Error("Sunucu eklemeyi reddetti");
-      await fetchAllDataFromAPI();
+      const createdMovie = await response.json();
 
       if (isCustomPoster(selectedPoster)) {
-        state.localMoviePostersBySignature[movieSignatureFromParts(movieData.FilmAd, movieData.Sure, movieData.Tur)] = selectedPoster;
-        const matchingMovie = mock.movies.find((movie) =>
-          !previousIds.has(movie.id) &&
-          movie.name === movieData.FilmAd &&
-          movie.duration === movieData.Sure &&
-          movie.genres.join(", ") === movieData.Tur,
-        ) || mock.movies
-          .filter((movie) => !previousIds.has(movie.id))
-          .sort((left, right) => right.id - left.id)[0];
-
-        if (matchingMovie) setMoviePoster(matchingMovie.id, selectedPoster, matchingMovie);
+        setMoviePoster(createdMovie.FilmID, selectedPoster, createdMovie);
       }
+
+      await fetchAllDataFromAPI();
 
       showToast("Film basariyla veritabanina eklendi!", "success");
     }
@@ -1503,11 +1651,16 @@ document.addEventListener("submit", async (event) => {
 window.addEventListener("hashchange", render);
 window.setInterval(() => {
   if (currentRoute() === "booking" && state.bookingStep === "payment" && state.checkoutEndsAt) {
-    render();
+    if (isPaymentFieldFocused()) {
+      updateCheckoutTimerDisplay();
+    } else {
+      render();
+    }
   }
 }, 1000);
 
 restoreAuthState();
+restoreLocalMoviePosters();
 if (!window.location.hash) {
   window.location.hash = "home";
 } else {

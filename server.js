@@ -132,13 +132,17 @@ app.get("/api/filmler", async (_req, res) => {
 app.post("/api/filmler", async (req, res) => {
   try {
     const pool = await sql.connect(config);
-    await pool.request()
+    const result = await pool.request()
       .input("FilmAd", sql.NVarChar, req.body.FilmAd)
       .input("Tur", sql.NVarChar, req.body.Tur)
       .input("Sure", sql.Int, req.body.Sure)
-      .query("INSERT INTO Filmler (FilmAd, Tur, Sure) VALUES (@FilmAd, @Tur, @Sure)");
+      .query(`
+        INSERT INTO Filmler (FilmAd, Tur, Sure)
+        OUTPUT INSERTED.*
+        VALUES (@FilmAd, @Tur, @Sure)
+      `);
 
-    res.status(201).send("Film eklendi.");
+    res.status(201).json(result.recordset[0]);
   } catch (error) {
     console.error(error);
     res.status(500).send("Film eklenirken hata olustu.");

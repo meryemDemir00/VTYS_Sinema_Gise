@@ -638,7 +638,31 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
   color: #ffffff;
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: plaintext;
   outline: 0;
+}
+
+.checkout-email-field,
+.checkout-email-field * {
+  direction: ltr !important;
+}
+
+.checkout-email-input {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: plaintext;
+}
+
+.checkout-email-input.is-invalid {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.checkout-email-input.is-valid {
+  border-color: #22c55e !important;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
 }
 
 .checkout-field input:focus {
