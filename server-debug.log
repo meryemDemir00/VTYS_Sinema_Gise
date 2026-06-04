@@ -489,3 +489,37 @@ API sunucusu 3000 portunda calisiyor.
     }
   ]
 }
+[biletler] Incoming ticket sale payload: {
+  "SeansID": 3,
+  "MusteriID": 1,
+  "KoltukNo": 54,
+  "KoltukEtiketi": "F4",
+  "film": "Iron Man",
+  "tarih": "Per, 4 Haz 2026",
+  "saat": "20:30",
+  "koltuklar": [
+    "F4"
+  ],
+  "email": "ornak@gmail.com"
+}
+[biletler] Normalized params: { SeansID: 3, requestedMusteriId: 1, KoltukNo: 54 }
+[biletler] Resolved customer: { MusteriID: 1, saleDate: 2026-06-04T14:08:44.888Z }
+[biletler] Stored procedure lookup: { found: false, procedureName: null }
+[biletler] Running fallback direct insert: {
+  SeansID: 3,
+  MusteriID: 1,
+  KoltukNo: 54,
+  SatisTarihi: 2026-06-04T14:08:44.888Z
+}
+[biletler] Fallback insert completed: {
+  rowsAffected: [ 1, 1 ],
+  recordset: [
+    {
+      BiletID: 20,
+      SeansID: 3,
+      MusteriID: 1,
+      KoltukNo: 54,
+      SatisTarihi: 2026-06-04T14:08:44.887Z
+    }
+  ]
+}
