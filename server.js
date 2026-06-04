@@ -220,18 +220,128 @@ app.get("/api/biletler", async (_req, res) => {
 
 app.post("/api/biletler", async (req, res) => {
   try {
+    console.log("[biletler] Incoming ticket sale payload:", JSON.stringify(req.body, null, 2));
     const pool = await sql.connect(config);
-    await pool.request()
-      .input("SeansID", sql.Int, req.body.SeansID)
-      .input("MusteriID", sql.Int, req.body.MusteriID)
-      .input("KoltukNo", sql.NVarChar, req.body.KoltukNo)
-      .input("SatisTarihi", sql.DateTime, new Date())
-      .query("INSERT INTO Biletler (SeansID, MusteriID, KoltukNo, SatisTarihi) VALUES (@SeansID, @MusteriID, @KoltukNo, @SatisTarihi)");
+    const seansId = Number(req.body.SeansID || 1);
+    const requestedMusteriId = Number(req.body.MusteriID || 1);
+    const koltukNo = Number.parseInt(req.body.KoltukNo, 10) || 1;
+    console.log("[biletler] Normalized params:", {
+      SeansID: seansId,
+      requestedMusteriId,
+      KoltukNo: koltukNo,
+    });
 
-    res.status(201).send("Bilet basariyla olusturuldu.");
+    const customerResult = await pool.request()
+      .input("MusteriID", sql.Int, requestedMusteriId)
+      .query(`
+        SELECT TOP 1 MusteriID
+        FROM Musteriler
+        WHERE MusteriID = @MusteriID
+          OR NOT EXISTS (SELECT 1 FROM Musteriler WHERE MusteriID = @MusteriID)
+        ORDER BY CASE WHEN MusteriID = @MusteriID THEN 0 ELSE 1 END, MusteriID
+      `);
+    const musteriId = customerResult.recordset[0]?.MusteriID || 1;
+    const saleDate = new Date();
+    console.log("[biletler] Resolved customer:", { MusteriID: musteriId, saleDate });
+
+    const procedureResult = await pool.request().query(`
+      SELECT TOP 1 name
+      FROM sys.procedures
+      WHERE name IN ('BiletSat', 'SatisYap', 'sp_BiletSat', 'sp_SatisYap')
+      ORDER BY CASE name
+        WHEN 'BiletSat' THEN 1
+        WHEN 'SatisYap' THEN 2
+        WHEN 'sp_BiletSat' THEN 3
+        ELSE 4
+      END
+    `);
+
+    let result;
+    let usedProcedure = false;
+    const procedureName = procedureResult.recordset[0]?.name;
+    console.log("[biletler] Stored procedure lookup:", {
+      found: Boolean(procedureName),
+      procedureName: procedureName || null,
+    });
+
+    if (procedureName) {
+      try {
+        console.log("[biletler] Calling stored procedure:", {
+          procedureName,
+          SeansID: seansId,
+          MusteriID: musteriId,
+          KoltukNo: koltukNo,
+        });
+        result = await pool.request()
+          .input("SeansID", sql.Int, seansId)
+          .input("MusteriID", sql.Int, musteriId)
+          .input("KoltukNo", sql.Int, koltukNo)
+          .query(`EXEC dbo.${procedureName} @SeansID = @SeansID, @MusteriID = @MusteriID, @KoltukNo = @KoltukNo`);
+        usedProcedure = true;
+        console.log("[biletler] Stored procedure completed:", {
+          rowsAffected: result.rowsAffected,
+          recordset: result.recordset,
+        });
+      } catch (procedureError) {
+        console.error(`[biletler] ${procedureName} failed, falling back to direct insert.`);
+        console.error(procedureError.stack || procedureError);
+      }
+    }
+
+    if (usedProcedure && !result?.recordset?.length) {
+      result = {
+        recordset: [{
+          SeansID: seansId,
+          MusteriID: musteriId,
+          KoltukNo: koltukNo,
+          SatisTarihi: saleDate,
+        }],
+      };
+    }
+
+    if (!usedProcedure && !result?.recordset?.length) {
+      console.log("[biletler] Running fallback direct insert:", {
+        SeansID: seansId,
+        MusteriID: musteriId,
+        KoltukNo: koltukNo,
+        SatisTarihi: saleDate,
+      });
+      result = await pool.request()
+        .input("SeansID", sql.Int, seansId)
+        .input("MusteriID", sql.Int, musteriId)
+        .input("KoltukNo", sql.Int, koltukNo)
+        .input("SatisTarihi", sql.DateTime, saleDate)
+        .query(`
+          INSERT INTO Biletler (SeansID, MusteriID, KoltukNo, SatisTarihi)
+          OUTPUT INSERTED.*
+          VALUES (@SeansID, @MusteriID, @KoltukNo, @SatisTarihi);
+
+          UPDATE Salonlar
+          SET Kapasite = CASE WHEN Kapasite > 0 THEN Kapasite - 1 ELSE Kapasite END
+          WHERE SalonID = (SELECT TOP 1 SalonID FROM Seanslar WHERE SeansID = @SeansID);
+        `);
+      console.log("[biletler] Fallback insert completed:", {
+        rowsAffected: result.rowsAffected,
+        recordset: result.recordset,
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      ticket: result.recordset?.[0] || {
+        SeansID: seansId,
+        MusteriID: musteriId,
+        KoltukNo: koltukNo,
+        SatisTarihi: saleDate,
+      },
+    });
   } catch (error) {
-    console.error("Bilet ekleme hatasi:", error);
-    res.status(500).send("Bilet olusturulurken hata meydana geldi.");
+    console.error("[biletler] Full ticket sale error stack:");
+    console.error(error.stack || error);
+    res.status(500).json({
+      success: false,
+      message: error?.message || "Bilet olusturulurken hata meydana geldi.",
+    });
   }
 });
 

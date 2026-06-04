@@ -1,0 +1,69 @@
+API sunucusu 3000 portunda calisiyor.
+[biletler] Incoming ticket sale payload: {
+  "SeansID": 3,
+  "MusteriID": 1,
+  "KoltukNo": 60,
+  "KoltukEtiketi": "F10",
+  "film": "Iron Man",
+  "tarih": "Per, 4 Haz 2026",
+  "saat": "20:30",
+  "koltuklar": [
+    "F10"
+  ],
+  "email": "orne@gmail.com"
+}
+[biletler] Normalized params: { SeansID: 3, requestedMusteriId: 1, KoltukNo: 60 }
+[biletler] Resolved customer: { MusteriID: 1, saleDate: 2026-06-04T13:45:19.025Z }
+[biletler] Stored procedure lookup: { found: false, procedureName: null }
+[biletler] Running fallback direct insert: {
+  SeansID: 3,
+  MusteriID: 1,
+  KoltukNo: 60,
+  SatisTarihi: 2026-06-04T13:45:19.025Z
+}
+[biletler] Fallback insert completed: {
+  rowsAffected: [ 1, 1 ],
+  recordset: [
+    {
+      BiletID: 7,
+      SeansID: 3,
+      MusteriID: 1,
+      KoltukNo: 60,
+      SatisTarihi: 2026-06-04T13:45:19.027Z
+    }
+  ]
+}
+[biletler] Incoming ticket sale payload: {
+  "SeansID": 3,
+  "MusteriID": 1,
+  "KoltukNo": 54,
+  "KoltukEtiketi": "F4",
+  "film": "Iron Man",
+  "tarih": "Per, 4 Haz 2026",
+  "saat": "20:30",
+  "koltuklar": [
+    "F4"
+  ],
+  "email": "ornek@gmail.com"
+}
+[biletler] Normalized params: { SeansID: 3, requestedMusteriId: 1, KoltukNo: 54 }
+[biletler] Resolved customer: { MusteriID: 1, saleDate: 2026-06-04T13:46:51.234Z }
+[biletler] Stored procedure lookup: { found: false, procedureName: null }
+[biletler] Running fallback direct insert: {
+  SeansID: 3,
+  MusteriID: 1,
+  KoltukNo: 54,
+  SatisTarihi: 2026-06-04T13:46:51.234Z
+}
+[biletler] Fallback insert completed: {
+  rowsAffected: [ 1, 1 ],
+  recordset: [
+    {
+      BiletID: 8,
+      SeansID: 3,
+      MusteriID: 1,
+      KoltukNo: 54,
+      SatisTarihi: 2026-06-04T13:46:51.233Z
+    }
+  ]
+}

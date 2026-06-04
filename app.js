@@ -14,6 +14,7 @@ const state = {
   bookingStep: "summary",
   checkoutEndsAt: 0,
   paymentSuccessOpen: false,
+  paymentSuccessTicket: null,
   paymentForm: createInitialPaymentForm(),
   adminTab: "Filmler",
   adminLogin: { username: "", password: "", error: "" },
@@ -94,6 +95,10 @@ function createInitialPaymentForm() {
     emailError: "",
     emailStatus: "",
     phone: "",
+    cardName: "",
+    cardNumber: "",
+    cardExpiry: "",
+    cardCvv: "",
     contractApproved: false,
     marketingApproved: false,
     error: "",
@@ -316,6 +321,7 @@ function resetPaymentFlow() {
   state.bookingStep = "summary";
   state.checkoutEndsAt = 0;
   state.paymentSuccessOpen = false;
+  state.paymentSuccessTicket = null;
   state.paymentForm = createInitialPaymentForm();
 }
 
@@ -349,6 +355,81 @@ function restorePaymentFieldSnapshot(snapshot) {
 
 function isPaymentFieldFocused() {
   return Boolean(document.activeElement?.closest?.("[data-payment-field]"));
+}
+
+function formatCardNumber(value) {
+  return String(value || "")
+    .replace(/\D/g, "")
+    .slice(0, 16)
+    .replace(/(.{4})/g, "$1 ")
+    .trim();
+}
+
+function formatCardExpiry(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+
+function formatCardCvv(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 3);
+}
+
+function findSelectedSession() {
+  const movie = getMovie();
+  return mock.sessions.find((session) => Number(session.FilmID) === Number(movie?.id)) || mock.sessions[0] || null;
+}
+
+function selectedSeatNumber(seat) {
+  const match = String(seat || "").match(/^([A-Z])(\d+)$/i);
+  if (!match) return Number.parseInt(seat, 10) || 1;
+
+  const rowIndex = seatRows.indexOf(match[1].toUpperCase());
+  const seatIndex = Number(match[2]);
+  return ((rowIndex >= 0 ? rowIndex : 0) * 10) + seatIndex;
+}
+
+function createTicketQrDataUrl(ticket) {
+  const url = createTicketInfoUrl(ticket);
+  const size = 21;
+  const cell = 6;
+  let hash = 2166136261;
+
+  for (const char of url) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  const rects = [];
+  const finder = [[0, 0], [14, 0], [0, 14]];
+  finder.forEach(([x, y]) => {
+    rects.push(`<rect x="${x * cell}" y="${y * cell}" width="${7 * cell}" height="${7 * cell}" fill="#000"/>`);
+    rects.push(`<rect x="${(x + 1) * cell}" y="${(y + 1) * cell}" width="${5 * cell}" height="${5 * cell}" fill="#fff"/>`);
+    rects.push(`<rect x="${(x + 2) * cell}" y="${(y + 2) * cell}" width="${3 * cell}" height="${3 * cell}" fill="#000"/>`);
+  });
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const inFinder = finder.some(([fx, fy]) => x >= fx && x < fx + 7 && y >= fy && y < fy + 7);
+      if (inFinder) continue;
+      const bit = (Math.imul(hash ^ (x * 31) ^ (y * 131), 2654435761) >>> 0) % 5;
+      if (bit < 2) rects.push(`<rect x="${x * cell}" y="${y * cell}" width="${cell}" height="${cell}" fill="#000"/>`);
+    }
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size * cell} ${size * cell}"><rect width="100%" height="100%" fill="#fff"/>${rects.join("")}</svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+function createTicketInfoUrl(ticket) {
+  const payload = encodeURIComponent(JSON.stringify({
+    id: ticket.id,
+    film: ticket.film,
+    tarih: ticket.tarih,
+    saat: ticket.saat,
+    koltuklar: ticket.koltuklar,
+  }));
+  return `${window.location.origin}/ticket?data=${payload}`;
 }
 
 function updateCheckoutTimerDisplay() {
@@ -418,12 +499,14 @@ function openPaymentStep() {
   render();
 }
 
-function completePayment() {
-  const { firstName, lastName, email, phone, contractApproved } = state.paymentForm;
+async function completePayment() {
+  const { firstName, lastName, email, phone, cardName, cardNumber, cardExpiry, cardCvv, contractApproved } = state.paymentForm;
   const emailError = validatePaymentEmail(email);
+  const cleanCardNumber = cardNumber.replace(/\D/g, "");
+  const cleanCvv = cardCvv.replace(/\D/g, "");
 
-  if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()) {
-    state.paymentForm.error = "Lutfen tum iletisim alanlarini doldurun.";
+  if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim() || !cardName.trim() || !cleanCardNumber || !cardExpiry.trim() || !cleanCvv) {
+    state.paymentForm.error = "Lutfen tum iletisim ve kart alanlarini doldurun.";
     render();
     return;
   }
@@ -436,17 +519,74 @@ function completePayment() {
     return;
   }
 
+  if (cleanCardNumber.startsWith("0000") || cleanCvv === "000") {
+    state.paymentForm.error = "&#214;deme ba&#351;ar&#305;s&#305;z: Bakiye yetersiz veya kart reddedildi.";
+    render();
+    return;
+  }
+
   if (!contractApproved) {
     state.paymentForm.error = "Devam etmek icin onay kosullarini kabul etmelisiniz.";
     render();
     return;
   }
 
-  state.paymentForm.error = "";
-  state.paymentForm.emailError = "";
-  state.paymentForm.emailStatus = "valid";
-  state.paymentSuccessOpen = true;
-  render();
+  try {
+    const movie = getMovie();
+    const session = findSelectedSession();
+    const selectedSeatLabels = state.selectedSeats.length ? state.selectedSeats : ["A1"];
+    const saleResults = [];
+
+    for (const seat of selectedSeatLabels) {
+      const ticketPayload = {
+        SeansID: Number(session?.SeansID || session?.id || 1),
+        MusteriID: Number(state.currentUser?.id || 1),
+        KoltukNo: selectedSeatNumber(seat),
+        KoltukEtiketi: seat,
+        film: movie?.name || "",
+        tarih: formatBookingDate(state.selectedDate),
+        saat: state.selectedTime,
+        koltuklar: selectedSeatLabels,
+        email,
+      };
+
+      const response = await fetch(`${API_BASE}/biletler`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ticketPayload),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.success === false) {
+        throw new Error(result.message || "Bilet satisi tamamlanamadi.");
+      }
+
+      saleResults.push(result.ticket || {});
+    }
+
+    const ticket = {
+      id: saleResults.map((item) => item.BiletID || item.id).filter(Boolean).join(", ") || Date.now(),
+      film: movie?.name || "",
+      tarih: formatBookingDate(state.selectedDate),
+      saat: state.selectedTime,
+      koltuklar: selectedSeatLabels.join(", "),
+      email,
+      satisTarihi: saleResults[0]?.SatisTarihi || new Date().toISOString(),
+    };
+    ticket.qrUrl = createTicketInfoUrl(ticket);
+    ticket.qrCode = createTicketQrDataUrl(ticket);
+
+    state.selectedSeats.forEach((seat) => takenSeats.add(seat));
+    state.paymentSuccessTicket = ticket;
+    state.paymentForm.error = "";
+    state.paymentForm.emailError = "";
+    state.paymentForm.emailStatus = "valid";
+    state.paymentSuccessOpen = true;
+    render();
+  } catch (error) {
+    state.paymentForm.error = error?.message || "Bilet satisi tamamlanamadi. Lutfen tekrar deneyin.";
+    render();
+  }
 }
 
 function authNavMarkup() {
@@ -620,6 +760,24 @@ function booking() {
               ${state.paymentForm.emailError ? `<p class="checkout-error checkout-email-error">${escapeHtml(state.paymentForm.emailError)}</p>` : ""}
             </label>
             <label class="checkout-field">
+              <span>Kart Üzerindeki İsim</span>
+              <input type="text" placeholder="Kart sahibinin adı soyadı" value="${escapeHtml(state.paymentForm.cardName)}" data-payment-field="cardName" />
+            </label>
+            <label class="checkout-field">
+              <span>Kart Numarası</span>
+              <input type="text" placeholder="XXXX XXXX XXXX XXXX" value="${escapeHtml(state.paymentForm.cardNumber)}" data-payment-field="cardNumber" maxlength="19" inputmode="numeric" autocomplete="cc-number" />
+            </label>
+            <div class="checkout-grid-two">
+              <label class="checkout-field">
+                <span>Son Kullanma Tarihi</span>
+                <input type="text" placeholder="AA/YY" value="${escapeHtml(state.paymentForm.cardExpiry)}" data-payment-field="cardExpiry" maxlength="5" inputmode="numeric" autocomplete="cc-exp" />
+              </label>
+              <label class="checkout-field">
+                <span>CVV</span>
+                <input type="password" placeholder="XXX" value="${escapeHtml(state.paymentForm.cardCvv)}" data-payment-field="cardCvv" maxlength="3" inputmode="numeric" autocomplete="cc-csc" />
+              </label>
+            </div>
+            <label class="checkout-field">
               <span>Cep Telefonu Numaran</span>
               <input type="tel" placeholder="05xx xxx xx xx" value="${escapeHtml(state.paymentForm.phone)}" data-payment-field="phone" maxlength="11" inputmode="numeric" />
             </label>
@@ -648,7 +806,7 @@ function booking() {
               <input type="checkbox" ${state.paymentForm.marketingApproved ? "checked" : ""} data-payment-toggle="marketingApproved" />
               <span>Sinematör E-Posta ve SMS gonderimleri araciligiyla on gosterimler, guncel etkinlikler ve kampanyalardan haberdar olmak istiyorum.</span>
             </label>
-            ${state.paymentForm.error ? `<p class="checkout-error">${escapeHtml(state.paymentForm.error)}</p>` : ""}
+            ${state.paymentForm.error ? `<p class="checkout-error checkout-payment-error">${escapeHtml(state.paymentForm.error)}</p>` : ""}
             <div class="checkout-actions">
               <button class="btn secondary" type="button" data-booking-back>Rezervasyona Don</button>
               <button class="btn checkout-submit" type="submit">Devam Et</button>
@@ -675,6 +833,7 @@ function booking() {
 }
 
 function paymentSuccessModal() {
+  const ticket = state.paymentSuccessTicket;
   return `
     <div class="modal-overlay payment-success-overlay">
       <section class="payment-success-modal" role="dialog" aria-modal="true" aria-label="Odeme basarili">
@@ -683,6 +842,20 @@ function paymentSuccessModal() {
           src="/S%C4%B0NEMAT%C3%96Rbiti%C5%9Fekran.png"
           alt="Biletiniz e-posta olarak tarafiniza iletilmistir. Bizi tercih ettiginiz icin tesekkurler."
         />
+        ${ticket ? `
+          <div class="ticket-success-card">
+            <div class="ticket-success-details">
+              <span class="tiny-label">Bilet No</span>
+              <strong>#${escapeHtml(ticket.id)}</strong>
+              <span>${escapeHtml(ticket.film)}</span>
+              <span>${escapeHtml(ticket.tarih)} - ${escapeHtml(ticket.saat)}</span>
+              <span>Koltuk: ${escapeHtml(ticket.koltuklar)}</span>
+              <span>E-posta: ${escapeHtml(ticket.email)}</span>
+              <span class="ticket-url">${escapeHtml(ticket.qrUrl)}</span>
+            </div>
+            <img class="ticket-qr" src="${ticket.qrCode}" alt="Bilet QR kodu" />
+          </div>
+        ` : ""}
         <button class="btn payment-success-button" type="button" data-close-payment-success>Tamam</button>
       </section>
     </div>
@@ -1499,9 +1672,11 @@ document.addEventListener("input", (event) => {
   const paymentField = event.target.closest("[data-payment-field]");
   if (paymentField) {
     const fieldName = paymentField.dataset.paymentField;
-    const nextValue = fieldName === "phone"
-      ? paymentField.value.replace(/[^0-9]/g, "").slice(0, 11)
-      : paymentField.value;
+    let nextValue = paymentField.value;
+    if (fieldName === "phone") nextValue = paymentField.value.replace(/[^0-9]/g, "").slice(0, 11);
+    if (fieldName === "cardNumber") nextValue = formatCardNumber(paymentField.value);
+    if (fieldName === "cardExpiry") nextValue = formatCardExpiry(paymentField.value);
+    if (fieldName === "cardCvv") nextValue = formatCardCvv(paymentField.value);
 
     if (paymentField.value !== nextValue) {
       paymentField.value = nextValue;
@@ -1584,7 +1759,7 @@ document.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   if (event.target.closest("[data-payment-form]")) {
-    completePayment();
+    await completePayment();
     return;
   }
 
