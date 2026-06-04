@@ -928,70 +928,54 @@ button {
 
 .payment-success-overlay {
   z-index: 60;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.84)),
-    radial-gradient(circle at center, rgba(159, 18, 57, 0.22), transparent 38%),
-    #060606;
+  padding: 24px;
+  background: #000;
 }
 
 .payment-success-modal {
-  width: min(1120px, 100%);
-  min-height: min(76vh, 760px);
-  display: grid;
-  align-content: space-between;
-  gap: 26px;
-  padding: 36px 42px;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
   border-radius: 16px;
-  position: relative;
-  overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(16, 10, 8, 0.58), rgba(7, 4, 4, 0.92)),
-    radial-gradient(circle at center 68%, rgba(255, 70, 35, 0.14), transparent 32%),
-    linear-gradient(180deg, #20110d 0%, #090909 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 32px 120px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  overflow: visible;
+  background: none;
+  box-shadow: none;
 }
 
-.payment-success-modal::before {
-  content: "";
-  position: absolute;
-  inset: auto 0 0;
-  height: 48%;
-  background:
-    radial-gradient(ellipse at 10% 100%, rgba(210, 52, 20, 0.32), transparent 36%),
-    radial-gradient(ellipse at 28% 100%, rgba(210, 52, 20, 0.28), transparent 28%),
-    radial-gradient(ellipse at 52% 100%, rgba(210, 52, 20, 0.28), transparent 30%),
-    radial-gradient(ellipse at 76% 100%, rgba(210, 52, 20, 0.28), transparent 30%),
-    radial-gradient(ellipse at 92% 100%, rgba(210, 52, 20, 0.26), transparent 26%);
-  opacity: 0.85;
-  pointer-events: none;
+.payment-success-image {
+  display: block;
+  width: 700px;
+  max-width: 90vw;
+  height: auto;
+  border-radius: 16px;
 }
 
-.payment-success-brand,
-.payment-success-copy,
 .payment-success-button {
-  position: relative;
-  z-index: 1;
-}
-
-.payment-success-brand {
+  position: static;
+  transform: none;
+  min-width: 150px;
+  min-height: 44px;
+  border-radius: 999px;
   color: #ffffff;
-  font-size: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08)),
+    #9a45cb;
+  border: 1px solid rgba(245, 240, 208, 0.34);
+  box-shadow: 0 12px 28px rgba(43, 10, 72, 0.32);
 }
 
-.payment-success-copy {
-  align-self: center;
-  text-align: center;
-  color: #ff2f2f;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(36px, 6vw, 78px);
-  line-height: 1.06;
-  text-shadow: 0 0 14px rgba(255, 34, 34, 0.92), 0 0 30px rgba(255, 48, 48, 0.72);
-}
-
-.payment-success-button {
-  justify-self: center;
-  min-width: 180px;
+.payment-success-button:hover {
+  transform: translateY(-1px);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.12)),
+    #b855d2;
+  box-shadow: 0 16px 34px rgba(43, 10, 72, 0.4);
 }
 
 .auth-modal {
@@ -1577,9 +1561,8 @@ button {
     width: 100%;
   }
 
-  .payment-success-modal {
-    min-height: 72vh;
-    padding: 28px 22px;
+  .payment-success-button {
+    width: calc(100% - 32px);
   }
 
   .report-grid {

@@ -588,11 +588,11 @@ function paymentSuccessModal() {
   return `
     <div class="modal-overlay payment-success-overlay">
       <section class="payment-success-modal" role="dialog" aria-modal="true" aria-label="Odeme basarili">
-        <div class="payment-success-brand">Sinematör</div>
-        <div class="payment-success-copy">
-          Sinema biletiniz tarafimizca e-posta adresinize ulasmistir.<br />
-          Iyi seyirler dileriz!
-        </div>
+        <img
+          class="payment-success-image"
+          src="/S%C4%B0NEMAT%C3%96Rbiti%C5%9Fekran.png"
+          alt="Biletiniz e-posta olarak tarafiniza iletilmistir. Bizi tercih ettiginiz icin tesekkurler."
+        />
         <button class="btn payment-success-button" type="button" data-close-payment-success>Tamam</button>
       </section>
     </div>
@@ -1186,7 +1186,7 @@ document.addEventListener("click", async (event) => {
 
   if (event.target.closest("[data-close-payment-success]")) {
     state.paymentSuccessOpen = false;
-    render();
+    window.location.href = "/";
     return;
   }
 
