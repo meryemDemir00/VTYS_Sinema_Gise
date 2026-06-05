@@ -60,13 +60,13 @@ Uygulama; Mobil Arayüz, Node.js API Sunucusu ve SQL Server olmak üzere üç ka
 
 ## Arayüz Özellikleri
 ### Ana sayfada vizyondaki filmler listelenir.
-![ERD](images/web1.png)
+![ERD](images/web1.jpeg)
 ### Film detay ekranı üzerinden seans ve koltuk seçimi yapılır.
-![ERD](images/web4.png)
+![ERD](images/web4.jpeg)
 ### Ödeme ekranında kullanıcı bilgileri girilir ve işlem tamamlanır.
-![ERD](images/web5.png)
+![ERD](images/web5.jpeg)
 ### Admin panelinde film ekleme, düzenleme ve silme işlemleri bulunur.
-![ERD](images/web3.png)
+![ERD](images/web3.jpeg)
 ### Mobil Arayüzü
 ![ERD](images/mobil1.png)
 ![ERD](images/mobil2.png)
