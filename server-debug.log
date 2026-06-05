@@ -557,3 +557,107 @@ API sunucusu 3000 portunda calisiyor.
     }
   ]
 }
+[biletler] Incoming ticket sale payload: {
+  "SeansID": 4,
+  "MusteriID": 1,
+  "KoltukNo": 25,
+  "KoltukEtiketi": "C5",
+  "film": "It",
+  "tarih": "Per, 4 Haz 2026",
+  "saat": "20:30",
+  "koltuklar": [
+    "C5",
+    "F4"
+  ],
+  "email": "ornek@gmail.com"
+}
+[biletler] Normalized params: { SeansID: 4, requestedMusteriId: 1, KoltukNo: 25 }
+[biletler] Resolved customer: { MusteriID: 1, saleDate: 2026-06-04T14:38:46.971Z }
+[biletler] Stored procedure lookup: { found: false, procedureName: null }
+[biletler] Running fallback direct insert: {
+  SeansID: 4,
+  MusteriID: 1,
+  KoltukNo: 25,
+  SatisTarihi: 2026-06-04T14:38:46.971Z
+}
+[biletler] Fallback insert completed: {
+  rowsAffected: [ 1, 1 ],
+  recordset: [
+    {
+      BiletID: 22,
+      SeansID: 4,
+      MusteriID: 1,
+      KoltukNo: 25,
+      SatisTarihi: 2026-06-04T14:38:46.970Z
+    }
+  ]
+}
+[biletler] Incoming ticket sale payload: {
+  "SeansID": 4,
+  "MusteriID": 1,
+  "KoltukNo": 54,
+  "KoltukEtiketi": "F4",
+  "film": "It",
+  "tarih": "Per, 4 Haz 2026",
+  "saat": "20:30",
+  "koltuklar": [
+    "C5",
+    "F4"
+  ],
+  "email": "ornek@gmail.com"
+}
+[biletler] Normalized params: { SeansID: 4, requestedMusteriId: 1, KoltukNo: 54 }
+[biletler] Resolved customer: { MusteriID: 1, saleDate: 2026-06-04T14:38:47.023Z }
+[biletler] Stored procedure lookup: { found: false, procedureName: null }
+[biletler] Running fallback direct insert: {
+  SeansID: 4,
+  MusteriID: 1,
+  KoltukNo: 54,
+  SatisTarihi: 2026-06-04T14:38:47.023Z
+}
+[biletler] Fallback insert completed: {
+  rowsAffected: [ 1, 1 ],
+  recordset: [
+    {
+      BiletID: 23,
+      SeansID: 4,
+      MusteriID: 1,
+      KoltukNo: 54,
+      SatisTarihi: 2026-06-04T14:38:47.023Z
+    }
+  ]
+}
+[biletler] Incoming ticket sale payload: {
+  "SeansID": 4,
+  "MusteriID": 1,
+  "KoltukNo": 56,
+  "KoltukEtiketi": "F6",
+  "film": "It",
+  "tarih": "Per, 4 Haz 2026",
+  "saat": "20:30",
+  "koltuklar": [
+    "F6"
+  ],
+  "email": "ornak@gmail.com"
+}
+[biletler] Normalized params: { SeansID: 4, requestedMusteriId: 1, KoltukNo: 56 }
+[biletler] Resolved customer: { MusteriID: 1, saleDate: 2026-06-04T14:42:20.596Z }
+[biletler] Stored procedure lookup: { found: false, procedureName: null }
+[biletler] Running fallback direct insert: {
+  SeansID: 4,
+  MusteriID: 1,
+  KoltukNo: 56,
+  SatisTarihi: 2026-06-04T14:42:20.596Z
+}
+[biletler] Fallback insert completed: {
+  rowsAffected: [ 1, 1 ],
+  recordset: [
+    {
+      BiletID: 24,
+      SeansID: 4,
+      MusteriID: 1,
+      KoltukNo: 56,
+      SatisTarihi: 2026-06-04T14:42:20.597Z
+    }
+  ]
+}
