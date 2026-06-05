@@ -673,7 +673,7 @@ function layout(content, options = {}) {
     <section class="screen">
       <header class="topbar">
         <button class="brand" data-route="home" aria-label="Ana sayfa">
-          <img class="brand-logo" src="/sinematör-logo.png" alt="sinematör" onerror="this.remove()" />
+          <img class="brand-logo" src="/sinematorlogo.png" alt="Sinematör logosu" style="width: 80px; height: 80px;" onerror="this.remove()" />
           <span class="brand-text">SİNEMATÖR</span>
         </button>
         <nav class="nav-actions">${nav}</nav>
