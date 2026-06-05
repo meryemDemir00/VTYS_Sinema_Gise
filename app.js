@@ -503,92 +503,72 @@ function openPaymentStep() {
   render();
 }
 
+// Ödeme Onayı ve Veritabanına Bilet Kaydı
 async function completePayment() {
-  const { firstName, lastName, email, phone, cardName, cardNumber, cardExpiry, cardCvv, contractApproved } = state.paymentForm;
+  const { firstName, lastName, email, phone, contractApproved } = state.paymentForm;
   const emailError = validatePaymentEmail(email);
   const cleanCardNumber = cardNumber.replace(/\D/g, "");
   const cleanCvv = cardCvv.replace(/\D/g, "");
 
-  if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim() || !cardName.trim() || !cleanCardNumber || !cardExpiry.trim() || !cleanCvv) {
-    state.paymentForm.error = "Lutfen tum iletisim ve kart alanlarini doldurun.";
-    render();
-    return;
+  // --- KLASİK FORM DOĞRULAMALARI ---
+  if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()) {
+    state.paymentForm.error = "Lütfen tüm iletişim alanlarını doldurun.";
+    render(); return;
   }
-
   if (emailError) {
     state.paymentForm.emailError = emailError;
     state.paymentForm.emailStatus = "invalid";
     state.paymentForm.error = "";
-    render();
-    return;
+    render(); return;
   }
-
-  if (cleanCardNumber.startsWith("0000") || cleanCvv === "000") {
-    state.paymentForm.error = "&#214;deme ba&#351;ar&#305;s&#305;z: Bakiye yetersiz veya kart reddedildi.";
-    render();
-    return;
-  }
-
   if (!contractApproved) {
-    state.paymentForm.error = "Devam etmek icin onay kosullarini kabul etmelisiniz.";
-    render();
-    return;
+    state.paymentForm.error = "Devam etmek için onay koşullarını kabul etmelisiniz.";
+    render(); return;
   }
 
+  // Yükleniyor durumu ekleyelim
+  state.paymentForm.error = "Biletler kesiliyor, lütfen bekleyin... ⏳";
+  render();
+
+  // --- VERİTABANI (SQL) KAYIT İŞLEMİ ---
   try {
-    const movie = getMovie();
-    const session = findSelectedSession();
-    const selectedSeatLabels = state.selectedSeats.length ? state.selectedSeats : ["A1"];
-    const saleResults = [];
+    // 1. Giriş yapan müşteriyi bul (Giriş yoksa ID'yi varsayılan 1 kabul edelim)
+    const musteriId = state.currentUser ? state.currentUser.id : 1;
 
-    for (const seat of selectedSeatLabels) {
-      const ticketPayload = {
-        SeansID: Number(session?.SeansID || session?.id || 1),
-        MusteriID: Number(state.currentUser?.id || 1),
-        KoltukNo: selectedSeatNumber(seat),
-        KoltukEtiketi: seat,
-        film: movie?.name || "",
-        tarih: formatBookingDate(state.selectedDate),
-        saat: state.selectedTime,
-        koltuklar: selectedSeatLabels,
-        email,
-      };
+    // 2. Hangi filme bilet alınıyor? Onun SeansID'sini bulalım (Yoksa 1 diyelim)
+    const seans = mock.sessions.find((s) => s.FilmID === Number(state.selectedMovieId));
+    const seansId = seans ? seans.SeansID : 1;
 
+    // 3. Seçilen her bir koltuk için Node.js API'ye istek atıyoruz
+    for (const koltuk of state.selectedSeats) {
       const response = await fetch(`${API_BASE}/biletler`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ticketPayload),
+        body: JSON.stringify({
+          SeansID: seansId,
+          MusteriID: musteriId,
+          KoltukNo: koltuk
+        })
       });
 
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || result.success === false) {
-        throw new Error(result.message || "Bilet satisi tamamlanamadi.");
+      if (!response.ok) {
+        throw new Error(`Koltuk (${koltuk}) kaydedilemedi!`);
       }
-
-      saleResults.push(result.ticket || {});
     }
 
-    const ticket = {
-      id: saleResults.map((item) => item.BiletID || item.id).filter(Boolean).join(", ") || Date.now(),
-      film: movie?.name || "",
-      tarih: formatBookingDate(state.selectedDate),
-      saat: state.selectedTime,
-      koltuklar: selectedSeatLabels.join(", "),
-      email,
-      satisTarihi: saleResults[0]?.SatisTarihi || new Date().toISOString(),
-    };
-    ticket.qrUrl = createTicketInfoUrl(ticket);
-    ticket.qrCode = createTicketQrDataUrl(ticket);
+    // 4. İşlem başarılıysa veritabanındaki son durumu güncelle
+    await fetchAllDataFromAPI();
 
-    state.selectedSeats.forEach((seat) => takenSeats.add(seat));
-    state.paymentSuccessTicket = ticket;
+    // 5. Başarı ekranını göster
     state.paymentForm.error = "";
     state.paymentForm.emailError = "";
     state.paymentForm.emailStatus = "valid";
     state.paymentSuccessOpen = true;
-    navigate("ticket-success");
+    render();
+
   } catch (error) {
-    state.paymentForm.error = error?.message || "Bilet satisi tamamlanamadi. Lutfen tekrar deneyin.";
+    console.error("Bilet Satış Hatası:", error);
+    state.paymentForm.error = "Bağlantı hatası: Biletler oluşturulamadı.";
     render();
   }
 }
@@ -1604,26 +1584,30 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
+  // 1. ÖNCE "EVET, SİL" BUTONU ÇALIŞMALI
+  if (event.target.closest("[data-confirm-delete-movie]")) {
+    if (state.selectedMovie) {
+      try {
+        const response = await fetch(`${API_BASE}/filmler/${state.selectedMovie.id}`, { method: "DELETE" });
+        if (!response.ok) throw new Error("Sunucu reddetti");
+        
+        showToast("Film başarıyla silindi.", "success");
+        await fetchAllDataFromAPI();
+      } catch (error) {
+        showToast("Silme işlemi başarısız oldu!", "warning");
+      }
+    }
+    state.isDeleteDialogOpen = false;
+    render();
+    return;
+  }
+
+  // 2. SONRA "HAYIR, VAZGEÇ / KAPAT" KONTROLÜ YAPILMALI
   if (event.target.closest("[data-cancel-delete-movie]") || (event.target.closest("[data-close-movie-modal]") && !event.target.closest(".movie-modal"))) {
     state.isDeleteDialogOpen = false;
     state.isAddMovieModalOpen = false;
     state.isEditMovieModalOpen = false;
     state.addMoviePoster = "";
-    render();
-    return;
-  }
-
-  if (event.target.closest("[data-confirm-delete-movie]")) {
-    if (state.selectedMovie) {
-      try {
-        await fetch(`${API_BASE}/filmler/${state.selectedMovie.id}`, { method: "DELETE" });
-        showToast("Film basariyla silindi.", "success");
-        await fetchAllDataFromAPI();
-      } catch (error) {
-        showToast("Silme islemi basarisiz oldu!", "warning");
-      }
-    }
-    state.isDeleteDialogOpen = false;
     render();
     return;
   }
