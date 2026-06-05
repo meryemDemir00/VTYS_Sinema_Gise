@@ -505,41 +505,90 @@ function openPaymentStep() {
 
 // Ödeme Onayı ve Veritabanına Bilet Kaydı
 async function completePayment() {
-  const { firstName, lastName, email, phone, contractApproved } = state.paymentForm;
+  const {
+    firstName,
+    lastName,
+    email,
+    phone,
+    cardName,
+    cardNumber,
+    cardExpiry,
+    cardCvv,
+    contractApproved,
+  } = state.paymentForm;
   const emailError = validatePaymentEmail(email);
-  const cleanCardNumber = cardNumber.replace(/\D/g, "");
-  const cleanCvv = cardCvv.replace(/\D/g, "");
+  const cleanCardNumber = String(cardNumber || "").replace(/\D/g, "");
+  const cleanCvv = String(cardCvv || "").replace(/\D/g, "");
+  const cleanPhone = String(phone || "").replace(/\D/g, "");
 
-  // --- KLASİK FORM DOĞRULAMALARI ---
   if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()) {
-    state.paymentForm.error = "Lütfen tüm iletişim alanlarını doldurun.";
-    render(); return;
+    state.paymentForm.error = "Lutfen tum iletisim alanlarini doldurun.";
+    render();
+    return;
   }
+
   if (emailError) {
     state.paymentForm.emailError = emailError;
     state.paymentForm.emailStatus = "invalid";
     state.paymentForm.error = "";
-    render(); return;
-  }
-  if (!contractApproved) {
-    state.paymentForm.error = "Devam etmek için onay koşullarını kabul etmelisiniz.";
-    render(); return;
+    render();
+    return;
   }
 
-  // Yükleniyor durumu ekleyelim
-  state.paymentForm.error = "Biletler kesiliyor, lütfen bekleyin... ⏳";
+  if (!contractApproved) {
+    state.paymentForm.error = "Devam etmek icin onay kosullarini kabul etmelisiniz.";
+    render();
+    return;
+  }
+
+  if (!cardName.trim()) {
+    state.paymentForm.error = "Kart uzerindeki isim zorunludur.";
+    render();
+    return;
+  }
+
+  if (cleanCardNumber.length !== 16) {
+    state.paymentForm.error = "Kart numarasi 16 haneli olmalidir.";
+    render();
+    return;
+  }
+
+  if (!/^\d{2}\/\d{2}$/.test(String(cardExpiry || "").trim())) {
+    state.paymentForm.error = "Son kullanma tarihi AA/YY formatinda olmalidir.";
+    render();
+    return;
+  }
+
+  if (cleanCvv.length !== 3) {
+    state.paymentForm.error = "CVV 3 haneli olmalidir.";
+    render();
+    return;
+  }
+
+  if (cleanPhone.length < 10) {
+    state.paymentForm.error = "Gecerli bir telefon numarasi girin.";
+    render();
+    return;
+  }
+
+  if (!state.selectedSeats.length) {
+    state.paymentForm.error = "Devam etmek icin en az bir koltuk secmelisiniz.";
+    render();
+    return;
+  }
+
+  state.paymentForm.error = "Biletler kesiliyor, lutfen bekleyin...";
+  state.paymentForm.emailError = "";
+  state.paymentForm.emailStatus = "valid";
   render();
 
-  // --- VERİTABANI (SQL) KAYIT İŞLEMİ ---
   try {
-    // 1. Giriş yapan müşteriyi bul (Giriş yoksa ID'yi varsayılan 1 kabul edelim)
     const musteriId = state.currentUser ? state.currentUser.id : 1;
-
-    // 2. Hangi filme bilet alınıyor? Onun SeansID'sini bulalım (Yoksa 1 diyelim)
     const seans = mock.sessions.find((s) => s.FilmID === Number(state.selectedMovieId));
     const seansId = seans ? seans.SeansID : 1;
+    const movie = getMovie();
+    const createdTickets = [];
 
-    // 3. Seçilen her bir koltuk için Node.js API'ye istek atıyoruz
     for (const koltuk of state.selectedSeats) {
       const response = await fetch(`${API_BASE}/biletler`, {
         method: "POST",
@@ -547,28 +596,53 @@ async function completePayment() {
         body: JSON.stringify({
           SeansID: seansId,
           MusteriID: musteriId,
-          KoltukNo: koltuk
-        })
+          KoltukNo: koltuk,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error(`Koltuk (${koltuk}) kaydedilemedi!`);
+        let errorMessage = `Koltuk (${koltuk}) kaydedilemedi!`;
+        try {
+          const errorPayload = await response.json();
+          if (errorPayload?.message) errorMessage = errorPayload.message;
+        } catch {
+          // Response body yoksa varsayilan mesaj kullanilir.
+        }
+        throw new Error(errorMessage);
       }
+
+      const result = await response.json();
+      if (!result?.success) {
+        throw new Error(result?.message || `Koltuk (${koltuk}) icin bilet olusturulamadi.`);
+      }
+
+      createdTickets.push(result.ticket || { KoltukNo: koltuk });
     }
 
-    // 4. İşlem başarılıysa veritabanındaki son durumu güncelle
     await fetchAllDataFromAPI();
 
-    // 5. Başarı ekranını göster
+    const primaryTicket = createdTickets[0] || {};
+    const ticketSummary = {
+      id: primaryTicket.BiletID || primaryTicket.id || `${Date.now()}`,
+      film: movie?.name || "Film",
+      tarih: formatBookingDate(state.selectedDate),
+      saat: state.selectedTime,
+      koltuklar: state.selectedSeats.join(", "),
+      email: email.trim(),
+    };
+
+    state.paymentSuccessTicket = {
+      ...ticketSummary,
+      qrCode: createTicketQrDataUrl(ticketSummary),
+    };
     state.paymentForm.error = "";
     state.paymentForm.emailError = "";
     state.paymentForm.emailStatus = "valid";
     state.paymentSuccessOpen = true;
-    render();
-
+    navigate("ticket-success");
   } catch (error) {
-    console.error("Bilet Satış Hatası:", error);
-    state.paymentForm.error = "Bağlantı hatası: Biletler oluşturulamadı.";
+    console.error("Bilet Satis Hatasi:", error);
+    state.paymentForm.error = error?.message || "Baglanti hatasi: Biletler olusturulamadi.";
     render();
   }
 }
