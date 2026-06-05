@@ -1,5 +1,6 @@
 package com.example.sinemegisemobil;
 
+import java.util.HashMap;
 import java.util.List;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -20,4 +21,10 @@ public interface ApiService {
     // Patron Hasılat Raporunu Getirir
     @GET("api/rapor/hasilat")
     Call<List<Rapor>> getHasilatRaporu();
+
+    // İŞTE DÜZELTİLEN KISIM: @POST ve @Body eklendi!
+    @POST("api/auth/login")
+    Call<ResponseBody> girisYap(@Body HashMap<String, String> bilgiler);
+    @POST("api/auth/register")
+    Call<ResponseBody> kayitOl(@Body HashMap<String, String> bilgiler);
 }

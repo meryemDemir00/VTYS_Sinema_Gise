@@ -67,8 +67,9 @@ app.post("/api/auth/register", async (req, res) => {
       .input("Sifre", sql.NVarChar, sifre) // Gerçek projelerde şifreler bcrypt ile şifrelenerek saklanır
       .query(`
         INSERT INTO Musteriler (Ad, Soyad, Email, Telefon, Sifre)
-        OUTPUT INSERTED.*
-        VALUES (@Ad, @Soyad, @Email, @Telefon, @Sifre)
+        VALUES (@Ad, @Soyad, @Email, @Telefon, @Sifre);
+        
+        SELECT SCOPE_IDENTITY() AS MusteriID, @Ad AS Ad, @Soyad AS Soyad, @Email AS Email;
       `);
 
     const createdUser = insertResult.recordset[0];
@@ -372,12 +373,13 @@ app.post("/api/biletler", async (req, res) => {
         .input("SatisTarihi", sql.DateTime, saleDate)
         .query(`
           INSERT INTO Biletler (SeansID, MusteriID, KoltukNo, SatisTarihi)
-          OUTPUT INSERTED.*
           VALUES (@SeansID, @MusteriID, @KoltukNo, @SatisTarihi);
 
           UPDATE Salonlar
           SET Kapasite = CASE WHEN Kapasite > 0 THEN Kapasite - 1 ELSE Kapasite END
           WHERE SalonID = (SELECT TOP 1 SalonID FROM Seanslar WHERE SeansID = @SeansID);
+
+          SELECT SCOPE_IDENTITY() AS BiletID, @SeansID as SeansID, @MusteriID as MusteriID, @KoltukNo as KoltukNo, @SatisTarihi as SatisTarihi;
         `);
       console.log("[biletler] Fallback insert completed:", {
         rowsAffected: result.rowsAffected,

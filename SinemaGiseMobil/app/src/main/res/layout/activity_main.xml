@@ -2,35 +2,64 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="#121212"
+    android:padding="16dp">
 
-    <Button
-        android:id="@+id/btnTest"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Bağlantıyı Test Et" />
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="8dp">
 
-    <Button
-        android:id="@+id/btnRapor"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:text="📊 Patron Raporunu Gör" />
+        <Button
+            android:id="@+id/btnTest"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Filmleri Yenile"
+            android:backgroundTint="#6200EE"
+            android:textColor="#FFFFFF"
+            android:layout_marginEnd="12dp" />
+
+        <Button
+            android:id="@+id/btnRapor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Patron Raporu"
+            android:backgroundTint="#03DAC5"
+            android:textColor="#000000" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/tvSonuc"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:text="Durum Bekleniyor..." />
-
-    <ListView
-        android:id="@+id/lvFilmler"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginTop="20dp" />
+        android:layout_height="wrap_content"
+        android:textAlignment="center"
+        android:textColor="#A0A0A0"
+        android:textSize="14sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginVertical="12dp"
+        android:background="#333333" />
+
+    <TextView
+        android:id="@+id/baslik"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Vizyondaki Filmler"
+        android:textColor="#FFFFFF"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerViewFilmler"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false" />
 
 </LinearLayout>

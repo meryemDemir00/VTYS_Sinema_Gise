@@ -34,7 +34,7 @@ public class ConnectionHelper {
                     "databasename=" + database + ";user=" + username + ";password=" + password + ";";
 
             connection = DriverManager.getConnection(connectionURL);
-            Log.d("DB_BILGI", "Müjde Emircan! Android uygulaması MSSQL'e bağlandı.");
+            Log.d("DB_BILGI", "Android uygulaması MSSQL'e bağlandı.");
 
         } catch (Exception ex) {
             Log.e("DB_HATA", "Bağlantı başarısız: " + ex.getMessage());

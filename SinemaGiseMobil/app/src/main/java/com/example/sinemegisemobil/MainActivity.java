@@ -1,19 +1,19 @@
-package com.example.sinemegisemobil; // Kendi paket adın kalmalı!
+package com.example.sinemegisemobil;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListView;
+import android.widget.GridLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import okhttp3.ResponseBody;
@@ -25,11 +25,11 @@ public class MainActivity extends AppCompatActivity {
 
     private Button btnTest;
     private TextView tvSonuc;
-    private ListView lvFilmler;
+    private RecyclerView recyclerView; // ListView yerine RecyclerView geldi
     private Button btnRapor;
 
-    // API'den gelen filmleri tutacağımız ana liste (Tıklanınca hangi filme tıklandığını bulmak için)
     private List<Film> filmListesi;
+    private FilmAdapter adapter; // Yeni eklediğimiz köprü sınıfı
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,8 +38,20 @@ public class MainActivity extends AppCompatActivity {
 
         btnTest = findViewById(R.id.btnTest);
         tvSonuc = findViewById(R.id.tvSonuc);
-        lvFilmler = findViewById(R.id.lvFilmler);
         btnRapor = findViewById(R.id.btnRapor);
+        // --- YETKİLENDİRME (AUTHORIZATION) KONTROLÜ ---
+        // Hafızadaki e-postayı oku
+        android.content.SharedPreferences prefs = getSharedPreferences("SinemaApp", MODE_PRIVATE);
+        String girisYapanEmail = prefs.getString("MusteriEmail", "");
+
+        // Eğer giriş yapan kişi PATRON DEĞİLSE, senin btnRapor butonunu SİL (Görünmez yap)
+        if (!girisYapanEmail.equals("hasbekelif237@gmail.com")) {
+            btnRapor.setVisibility(View.GONE);
+        }
+
+        // RecyclerView Tanımlaması
+        recyclerView = findViewById(R.id.recyclerViewFilmler);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         btnRapor.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -47,6 +59,8 @@ public class MainActivity extends AppCompatActivity {
                 patronRaporunuGetir();
             }
         });
+
+        filmleriGetir();
 
         btnTest.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -56,47 +70,110 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // === YENİ: LİSTEDEKİ FİLMLERE TIKLAMA OLAYI ===
-        lvFilmler.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                if (filmListesi != null) {
-                    Film secilenFilm = filmListesi.get(position);
-                    biletEkraniGoster(secilenFilm);
-                }
-            }
-        });
+        // Uygulama açılır açılmaz filmleri otomatik getirmesini istersen buraya filmleriGetir(); yazabilirsin.
     }
 
+    // --- SENİN YAZDIĞIN BİLET KESME FONKSİYONLARI (Aynı Kaldı) ---
+    // --- YENİ EKLENEN DEĞİŞKENLER ---
+    private String secilenKoltukNo = "";
+    private Button oncekiSecilenButon = null;
+
+    // --- GÜNCELLENEN BİLET EKRANI FONKSİYONU ---
     private void biletEkraniGoster(Film film) {
-        // Ekranda açılan küçük bir pencere (Dialog) tasarlıyoruz
+        // Kendi oluşturduğumuz tasarımı (dialog_koltuk_secimi.xml) popup olarak açıyoruz
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-        builder.setTitle(film.getAd() + " - Bilet Al");
-        builder.setMessage("Lütfen koltuk numarasını girin (Örn: C4):");
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_koltuk_secimi, null);
+        builder.setView(dialogView);
 
-        // Kullanıcının koltuk numarası yazabileceği bir giriş alanı
-        final EditText koltukGiris = new EditText(MainActivity.this);
-        builder.setView(koltukGiris);
+        AlertDialog dialog = builder.create();
 
-        // Satın Al Butonu
-        builder.setPositiveButton("Bileti Kes", new DialogInterface.OnClickListener() {
+        // Tasarımdaki elemanları kodla eşleştiriyoruz
+        TextView tvFilmAdi = dialogView.findViewById(R.id.tvFilmAdiDialog);
+        GridLayout gridLayout = dialogView.findViewById(R.id.gridLayoutKoltuklar);
+        Button btnOnayla = dialogView.findViewById(R.id.btnKoltukOnayla);
+
+        tvFilmAdi.setText(film.getAd() + " - Koltuk Seçimi");
+        secilenKoltukNo = ""; // Her açılışta sıfırla
+        oncekiSecilenButon = null;
+
+        // Koltuk boyutlarını telefon ekranına göre ayarlıyoruz (dp to px)
+        int boyut = (int) (45 * getResources().getDisplayMetrics().density);
+        int margin = (int) (4 * getResources().getDisplayMetrics().density);
+
+        // A'dan E'ye kadar 5 satır, 1'den 5'e kadar 5 sütun = 25 Koltuk
+        String[] satirlar = {"A", "B", "C", "D", "E"};
+
+        for (int i = 0; i < 5; i++) {
+            for (int j = 1; j <= 5; j++) {
+                String koltukIsmi = satirlar[i] + j; // Örn: A1, B3...
+
+                Button koltukBtn = new Button(MainActivity.this);
+                koltukBtn.setText(koltukIsmi);
+                koltukBtn.setTextSize(12);
+                koltukBtn.setBackgroundColor(android.graphics.Color.DKGRAY); // Boş koltuklar koyu gri
+                koltukBtn.setTextColor(android.graphics.Color.WHITE);
+
+                android.widget.GridLayout.LayoutParams params = new android.widget.GridLayout.LayoutParams();
+                params.width = boyut;
+                params.height = boyut;
+                params.setMargins(margin, margin, margin, margin);
+                koltukBtn.setLayoutParams(params);
+
+                // Bir koltuğa tıklandığında çalışacak olay
+                koltukBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        // Eğer önceden seçili bir koltuk varsa, onu tekrar eski rengine (Gri) döndür
+                        if (oncekiSecilenButon != null) {
+                            oncekiSecilenButon.setBackgroundColor(android.graphics.Color.DKGRAY);
+                            oncekiSecilenButon.setTextColor(android.graphics.Color.WHITE);
+                        }
+
+                        // Yeni tıklanan koltuğu seçili (Turkuaz/Yeşil) yap
+                        koltukBtn.setBackgroundColor(android.graphics.Color.parseColor("#03DAC5"));
+                        koltukBtn.setTextColor(android.graphics.Color.BLACK);
+
+                        secilenKoltukNo = koltukIsmi;
+                        oncekiSecilenButon = koltukBtn; // Hafızada tut
+                    }
+                });
+
+                gridLayout.addView(koltukBtn);
+            }
+        }
+
+        // Bileti Kes Butonuna Basıldığında...
+        btnOnayla.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(DialogInterface dialog, int which) {
-                String koltukNo = koltukGiris.getText().toString().trim();
+            public void onClick(View v) {
+                if (!secilenKoltukNo.isEmpty()) {
 
-                if (!koltukNo.isEmpty()) {
-                    // Veritabanı Foreign Key hatası vermesin diye demo olarak Seans:1 ve Musteri:1 gönderiyoruz
-                    BiletIstek istek = new BiletIstek(1, 1, koltukNo);
+                    // Android'in hafızasına kaydettiğimiz gerçek Müşteri ID'sini okuyoruz
+                    android.content.SharedPreferences prefs = getSharedPreferences("SinemaApp", MODE_PRIVATE);
+                    int gercekMusteriId = prefs.getInt("MusteriID", -1);
+
+                    if (gercekMusteriId == -1) {
+                        Toast.makeText(MainActivity.this, "Oturum hatası! Lütfen tekrar giriş yapın.", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    // Bileti Node.js'e gönder
+                    BiletIstek istek = new BiletIstek(1, gercekMusteriId, secilenKoltukNo);
                     biletKaydet(istek);
+                    dialog.dismiss(); // İşlem bitince popup'ı kapat
+
                 } else {
-                    Toast.makeText(MainActivity.this, "Koltuk numarası boş olamaz!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Lütfen haritadan bir koltuk seçin!", Toast.LENGTH_SHORT).show();
                 }
             }
         });
 
-        // İptal Butonu
-        builder.setNegativeButton("İptal", null);
-        builder.show();
+        // Popup penceresinin arka planını transparan yapıp kenarlarının yuvarlak görünmesini sağlar
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        dialog.show();
     }
 
     private void biletKaydet(BiletIstek istek) {
@@ -112,13 +189,14 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Ödeme reddedildi! Hata: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
-
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
                 Toast.makeText(MainActivity.this, "Bağlantı hatası: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
+
+    // --- SENİN YAZDIĞIN PATRON RAPORU (Aynı Kaldı) ---
     private void patronRaporunuGetir() {
         ApiService apiService = RetrofitClient.getService();
         Call<List<Rapor>> call = apiService.getHasilatRaporu();
@@ -139,7 +217,6 @@ public class MainActivity extends AppCompatActivity {
 
                     sb.append("💰 GENEL TOPLAM CİRO: ").append(genelToplam).append(" TL");
 
-                    // Şık bir uyarı penceresi (Dialog) ile raporu ekrana basıyoruz
                     new AlertDialog.Builder(MainActivity.this)
                             .setTitle("📊 Günlük Hasılat Raporu")
                             .setMessage(sb.toString())
@@ -149,13 +226,14 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Rapor alınamadı!", Toast.LENGTH_SHORT).show();
                 }
             }
-
             @Override
             public void onFailure(Call<List<Rapor>> call, Throwable t) {
                 Toast.makeText(MainActivity.this, "Bağlantı Hatası!", Toast.LENGTH_SHORT).show();
             }
         });
     }
+
+    // --- GÜNCELLENEN FİLMLERİ GETİRME FONKSİYONU ---
     private void filmleriGetir() {
         ApiService apiService = RetrofitClient.getService();
         Call<List<Film>> call = apiService.getFilmler();
@@ -166,15 +244,16 @@ public class MainActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     filmListesi = response.body();
 
-                    ArrayList<String> filmGorselListesi = new ArrayList<>();
-                    for (Film film : filmListesi) {
-                        filmGorselListesi.add("🎬 " + film.getAd() + "\nTür: " + film.getTur() + " | Süre: " + film.getSure() + " dk");
-                    }
+                    // YENİ NESİL ADAPTER KULLANIMI VE TIKLAMA OLAYI
+                    adapter = new FilmAdapter(filmListesi, new FilmAdapter.OnItemClickListener() {
+                        @Override
+                        public void onItemClick(Film film) {
+                            // Karta tıklandığında senin bilet ekranın açılacak
+                            biletEkraniGoster(film);
+                        }
+                    });
 
-                    ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_list_item_1, filmGorselListesi);
-                    lvFilmler.setAdapter(adapter);
-
-                    tvSonuc.setText("Bağlantı Başarılı! " + filmListesi.size() + " film çekildi. ✅");
+                    recyclerView.setAdapter(adapter);
                 }
             }
 

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#121212"
+    android:padding="32dp"
+    android:gravity="center">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="YENİ HESAP OLUŞTUR"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp" />
+
+    <EditText
+        android:id="@+id/etAd"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:background="#1E1E24"
+        android:hint="Adınız"
+        android:textColorHint="#888888"
+        android:textColor="#FFFFFF"
+        android:padding="16dp"
+        android:layout_marginBottom="12dp" />
+
+    <EditText
+        android:id="@+id/etSoyad"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:background="#1E1E24"
+        android:hint="Soyadınız"
+        android:textColorHint="#888888"
+        android:textColor="#FFFFFF"
+        android:padding="16dp"
+        android:layout_marginBottom="12dp" />
+
+    <EditText
+        android:id="@+id/etTelefon"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:background="#1E1E24"
+        android:hint="Telefon Numaranız"
+        android:inputType="phone"
+        android:textColorHint="#888888"
+        android:textColor="#FFFFFF"
+        android:padding="16dp"
+        android:layout_marginBottom="12dp" />
+
+    <EditText
+        android:id="@+id/etEmail"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:background="#1E1E24"
+        android:hint="E-Posta Adresiniz"
+        android:inputType="textEmailAddress"
+        android:textColorHint="#888888"
+        android:textColor="#FFFFFF"
+        android:padding="16dp"
+        android:layout_marginBottom="12dp" />
+
+    <EditText
+        android:id="@+id/etKayitSifre"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:background="#1E1E24"
+        android:hint="Şifreniz"
+        android:inputType="textPassword"
+        android:textColorHint="#888888"
+        android:textColor="#FFFFFF"
+        android:padding="16dp"
+        android:layout_marginBottom="24dp" />
+
+    <Button
+        android:id="@+id/btnKayitOl"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="KAYIT OL"
+        android:backgroundTint="#03DAC5"
+        android:textColor="#000000"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+</LinearLayout>
