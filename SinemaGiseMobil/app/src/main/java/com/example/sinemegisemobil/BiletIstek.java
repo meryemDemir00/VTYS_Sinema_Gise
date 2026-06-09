@@ -5,7 +5,6 @@ public class BiletIstek {
     private int MusteriID;
     private String KoltukNo;
 
-    // Verileri paketleyen yapıcı metod (Constructor)
     public BiletIstek(int seansID, int musteriID, String koltukNo) {
         this.SeansID = seansID;
         this.MusteriID = musteriID;

@@ -12,14 +12,11 @@ import java.util.List;
 public class FilmAdapter extends RecyclerView.Adapter<FilmAdapter.FilmViewHolder> {
 
     private List<Film> filmListesi;
-    private OnItemClickListener listener; // Tıklama dinleyicisi eklendi
-
-    // --- Tıklama için özel arayüz (Interface) ---
+    private OnItemClickListener listener;
     public interface OnItemClickListener {
         void onItemClick(Film film);
     }
 
-    // Constructor güncellendi
     public FilmAdapter(List<Film> filmListesi, OnItemClickListener listener) {
         this.filmListesi = filmListesi;
         this.listener = listener;
@@ -40,10 +37,8 @@ public class FilmAdapter extends RecyclerView.Adapter<FilmAdapter.FilmViewHolder
         holder.textFilmTur.setText("Tür: " + siradakiFilm.getTur());
         holder.textFilmSure.setText("Süre: " + siradakiFilm.getSure() + " dk");
 
-        // --- DİNAMİK AFİŞ KONTROLÜ ---
-        // Veritabanından gelen film ismini küçük harfe çevirip içinde geçen kelimeyi arıyoruz
         String filmAdi = siradakiFilm.getAd().toLowerCase();
-        int gorselId = R.mipmap.ic_launcher; // Bulamazsa varsayılan yeşil ikon
+        int gorselId = R.mipmap.ic_launcher;
 
         // Senin drawable klasöründeki isimlerle eşleştiriyoruz
         if (filmAdi.contains("matrix")) gorselId = R.drawable.matrix;
@@ -54,10 +49,8 @@ public class FilmAdapter extends RecyclerView.Adapter<FilmAdapter.FilmViewHolder
         else if (filmAdi.contains("dernek")) gorselId = R.drawable.dugun_dernek_afis;
         else if (filmAdi.contains("gilmore")) gorselId = R.drawable.gilmore_girls;
 
-        // Seçilen afişi ekrandaki resim kutusuna yerleştir
         holder.imgAfis.setImageResource(gorselId);
 
-        // --- KARTA TIKLANDIĞINDA ÇALIŞACAK KOD ---
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

@@ -24,12 +24,10 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // Arayüz elemanlarını bağlıyoruz
         etIdentifier = findViewById(R.id.etIdentifier);
         etSifre = findViewById(R.id.etSifre);
         btnLogin = findViewById(R.id.btnLogin);
 
-        // Giriş butonuna tıklandığında...
         btnLogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -41,8 +39,6 @@ public class LoginActivity extends AppCompatActivity {
                     Toast.makeText(LoginActivity.this, "Lütfen tüm alanları doldurun!", Toast.LENGTH_SHORT).show();
                     return;
                 }
-
-                // Node.js'e verileri gönder
                 sunucuyaGirisYap(identifier, sifre);
             }
         });
@@ -70,16 +66,13 @@ public class LoginActivity extends AppCompatActivity {
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     try {
-                        // Node.js'ten gelen JSON cevabını metin olarak okuyoruz
                         String jsonCevap = response.body().string();
                         org.json.JSONObject jsonObject = new org.json.JSONObject(jsonCevap);
 
-                        // 1. "user" paketini açıp ID ve E-posta değerlerini alıyoruz
                         org.json.JSONObject userObjesi = jsonObject.getJSONObject("user");
                         int musteriId = userObjesi.getInt("id");
                         String musteriEmail = userObjesi.getString("email");
 
-                        // 2. Android'in hafızasına (SharedPreferences) kaydediyoruz
                         android.content.SharedPreferences prefs = getSharedPreferences("SinemaApp", MODE_PRIVATE);
                         prefs.edit()
                                 .putInt("MusteriID", musteriId)
@@ -88,7 +81,6 @@ public class LoginActivity extends AppCompatActivity {
 
                         Toast.makeText(LoginActivity.this, "Giriş Başarılı! Hoş Geldiniz.", Toast.LENGTH_SHORT).show();
 
-                        // Ana ekrana geçiş
                         Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                         startActivity(intent);
                         finish();

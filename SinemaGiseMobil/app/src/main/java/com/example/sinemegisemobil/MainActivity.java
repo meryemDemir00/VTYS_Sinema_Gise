@@ -25,11 +25,11 @@ public class MainActivity extends AppCompatActivity {
 
     private Button btnTest;
     private TextView tvSonuc;
-    private RecyclerView recyclerView; // ListView yerine RecyclerView geldi
+    private RecyclerView recyclerView;
     private Button btnRapor;
 
     private List<Film> filmListesi;
-    private FilmAdapter adapter; // Yeni eklediğimiz köprü sınıfı
+    private FilmAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,17 +39,21 @@ public class MainActivity extends AppCompatActivity {
         btnTest = findViewById(R.id.btnTest);
         tvSonuc = findViewById(R.id.tvSonuc);
         btnRapor = findViewById(R.id.btnRapor);
-        // --- YETKİLENDİRME (AUTHORIZATION) KONTROLÜ ---
-        // Hafızadaki e-postayı oku
+
+        // KAYNAK (REFERANS) BELİRTME: SharedPreferences ile Oturum Kontrolü
+        // Kullanıcının cihaza kaydettiği oturum verilerini (MusteriEmail vb.) okuma işlemi
+        // Android Developers resmi dokümantasyonundan uyarlanmıştır.
+        // Kaynak URL: https://developer.android.com/training/data-storage/shared-preferences
         android.content.SharedPreferences prefs = getSharedPreferences("SinemaApp", MODE_PRIVATE);
         String girisYapanEmail = prefs.getString("MusteriEmail", "");
 
-        // Eğer giriş yapan kişi PATRON DEĞİLSE, senin btnRapor butonunu SİL (Görünmez yap)
         if (!girisYapanEmail.equals("hasbekelif237@gmail.com")) {
             btnRapor.setVisibility(View.GONE);
         }
 
-        // RecyclerView Tanımlaması
+        // KAYNAK (REFERANS) BELİRTME: RecyclerView ve LayoutManager Yapılandırması
+        // Dinamik liste gösterimi için standart RecyclerView bağlama işlemi kullanılmıştır.
+        // Kaynak URL: https://developer.android.com/guide/topics/ui/layout/recyclerview
         recyclerView = findViewById(R.id.recyclerViewFilmler);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
@@ -69,48 +73,47 @@ public class MainActivity extends AppCompatActivity {
                 filmleriGetir();
             }
         });
-
-        // Uygulama açılır açılmaz filmleri otomatik getirmesini istersen buraya filmleriGetir(); yazabilirsin.
     }
-
-    // --- SENİN YAZDIĞIN BİLET KESME FONKSİYONLARI (Aynı Kaldı) ---
-    // --- YENİ EKLENEN DEĞİŞKENLER ---
     private String secilenKoltukNo = "";
     private Button oncekiSecilenButon = null;
 
-    // --- GÜNCELLENEN BİLET EKRANI FONKSİYONU ---
     private void biletEkraniGoster(Film film) {
-        // Kendi oluşturduğumuz tasarımı (dialog_koltuk_secimi.xml) popup olarak açıyoruz
+        // KAYNAK (REFERANS) BELİRTME: Custom AlertDialog Kullanımı
+        // Varsayılan diyalog penceresi yerine özel bir XML (dialog_koltuk_secimi) yükleme (inflate)
+        // işlemi StackOverflow "How to implement a custom AlertDialog view" başlığından uyarlanmıştır.
+        // Kaynak URL: https://stackoverflow.com/questions/13627252/how-to-create-a-custom-alertdialog
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_koltuk_secimi, null);
         builder.setView(dialogView);
 
         AlertDialog dialog = builder.create();
 
-        // Tasarımdaki elemanları kodla eşleştiriyoruz
         TextView tvFilmAdi = dialogView.findViewById(R.id.tvFilmAdiDialog);
         GridLayout gridLayout = dialogView.findViewById(R.id.gridLayoutKoltuklar);
         Button btnOnayla = dialogView.findViewById(R.id.btnKoltukOnayla);
 
         tvFilmAdi.setText(film.getAd() + " - Koltuk Seçimi");
-        secilenKoltukNo = ""; // Her açılışta sıfırla
+        secilenKoltukNo = "";
         oncekiSecilenButon = null;
 
-        // Koltuk boyutlarını telefon ekranına göre ayarlıyoruz (dp to px)
+        // KAYNAK (REFERANS) BELİRTME: DP'den Pixel'e (PX) Dönüşüm Formülü
+        // Java kodunda dinamik olarak oluşturulan butonların ekran çözünürlüğüne (density) göre
+        // doğru boyutlanması (dp -> px çevirisi) için standart Android metodu kullanılmıştır.
+        // Kaynak URL: https://stackoverflow.com/questions/8309354/formula-px-to-dp-dp-to-px-android
         int boyut = (int) (45 * getResources().getDisplayMetrics().density);
         int margin = (int) (4 * getResources().getDisplayMetrics().density);
 
-        // A'dan E'ye kadar 5 satır, 1'den 5'e kadar 5 sütun = 25 Koltuk
         String[] satirlar = {"A", "B", "C", "D", "E"};
 
+        // Dinamik Koltuk (Buton) Üretimi
         for (int i = 0; i < 5; i++) {
             for (int j = 1; j <= 5; j++) {
-                String koltukIsmi = satirlar[i] + j; // Örn: A1, B3...
+                String koltukIsmi = satirlar[i] + j;
 
                 Button koltukBtn = new Button(MainActivity.this);
                 koltukBtn.setText(koltukIsmi);
                 koltukBtn.setTextSize(12);
-                koltukBtn.setBackgroundColor(android.graphics.Color.DKGRAY); // Boş koltuklar koyu gri
+                koltukBtn.setBackgroundColor(android.graphics.Color.DKGRAY);
                 koltukBtn.setTextColor(android.graphics.Color.WHITE);
 
                 android.widget.GridLayout.LayoutParams params = new android.widget.GridLayout.LayoutParams();
@@ -119,17 +122,14 @@ public class MainActivity extends AppCompatActivity {
                 params.setMargins(margin, margin, margin, margin);
                 koltukBtn.setLayoutParams(params);
 
-                // Bir koltuğa tıklandığında çalışacak olay
                 koltukBtn.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        // Eğer önceden seçili bir koltuk varsa, onu tekrar eski rengine (Gri) döndür
                         if (oncekiSecilenButon != null) {
                             oncekiSecilenButon.setBackgroundColor(android.graphics.Color.DKGRAY);
                             oncekiSecilenButon.setTextColor(android.graphics.Color.WHITE);
                         }
 
-                        // Yeni tıklanan koltuğu seçili (Turkuaz/Yeşil) yap
                         koltukBtn.setBackgroundColor(android.graphics.Color.parseColor("#03DAC5"));
                         koltukBtn.setTextColor(android.graphics.Color.BLACK);
 
@@ -142,13 +142,10 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        // Bileti Kes Butonuna Basıldığında...
         btnOnayla.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (!secilenKoltukNo.isEmpty()) {
-
-                    // Android'in hafızasına kaydettiğimiz gerçek Müşteri ID'sini okuyoruz
                     android.content.SharedPreferences prefs = getSharedPreferences("SinemaApp", MODE_PRIVATE);
                     int gercekMusteriId = prefs.getInt("MusteriID", -1);
 
@@ -157,18 +154,15 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
 
-                    // Bileti Node.js'e gönder
                     BiletIstek istek = new BiletIstek(1, gercekMusteriId, secilenKoltukNo);
                     biletKaydet(istek);
-                    dialog.dismiss(); // İşlem bitince popup'ı kapat
-
+                    dialog.dismiss();
                 } else {
                     Toast.makeText(MainActivity.this, "Lütfen haritadan bir koltuk seçin!", Toast.LENGTH_SHORT).show();
                 }
             }
         });
 
-        // Popup penceresinin arka planını transparan yapıp kenarlarının yuvarlak görünmesini sağlar
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
@@ -177,6 +171,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void biletKaydet(BiletIstek istek) {
+        // KAYNAK (REFERANS) BELİRTME: Retrofit Asenkron İstek (Enqueue Callback) Mimarisi
+        // Backend API'sine JSON verisi göndermek ve sonucu arka planda dinlemek için
+        // Square Retrofit kütüphanesinin standart Callback yapısı kullanılmıştır.
+        // Kaynak URL: https://square.github.io/retrofit/
         ApiService apiService = RetrofitClient.getService();
         Call<ResponseBody> call = apiService.biletAl(istek);
 
@@ -196,7 +194,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // --- SENİN YAZDIĞIN PATRON RAPORU (Aynı Kaldı) ---
     private void patronRaporunuGetir() {
         ApiService apiService = RetrofitClient.getService();
         Call<List<Rapor>> call = apiService.getHasilatRaporu();
@@ -233,7 +230,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // --- GÜNCELLENEN FİLMLERİ GETİRME FONKSİYONU ---
     private void filmleriGetir() {
         ApiService apiService = RetrofitClient.getService();
         Call<List<Film>> call = apiService.getFilmler();
@@ -244,11 +240,9 @@ public class MainActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     filmListesi = response.body();
 
-                    // YENİ NESİL ADAPTER KULLANIMI VE TIKLAMA OLAYI
                     adapter = new FilmAdapter(filmListesi, new FilmAdapter.OnItemClickListener() {
                         @Override
                         public void onItemClick(Film film) {
-                            // Karta tıklandığında senin bilet ekranın açılacak
                             biletEkraniGoster(film);
                         }
                     });

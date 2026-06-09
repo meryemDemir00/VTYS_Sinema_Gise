@@ -4,9 +4,18 @@ import sql from "mssql";
 import * as db from "./auth-db.js";
 
 const app = express();
+
+// KAYNAK (REFERANS) BELİRTME: Express.js ve CORS Yapılandırması
+// Farklı portlarda çalışan frontend ve backend'in haberleşebilmesi (Cross-Origin Resource Sharing) için
+// CORS ayarları Express.js resmi dokümantasyonundan faydalanılarak yapılandırılmıştır.
+// Kaynak URL: https://expressjs.com/en/resources/middleware/cors.html
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
+// KAYNAK (REFERANS) BELİRTME: MSSQL Veritabanı Bağlantı Ayarları
+// Node.js üzerinden SQL Server'a bağlanmak için 'mssql' paketinin dokümantasyonundaki
+// standart konfigürasyon (özellikle trustServerCertificate ayarı) kullanılmıştır.
+// Kaynak URL: https://www.npmjs.com/package/mssql#configuration
 const config = {
   user: "sa",
   password: "12345",
@@ -18,6 +27,10 @@ const config = {
   },
 };
 
+// KAYNAK (REFERANS) BELİRTME: Base64 Token Üretimi
+// Kullanıcı oturumunu yönetmek için JSON objesinin Base64url formatına çevrilmesi işlemi
+// Node.js Buffer API dokümantasyonundan uyarlanmıştır.
+// Kaynak URL: https://nodejs.org/api/buffer.html#buffers-and-character-encodings
 function createAuthToken(user) {
   return Buffer.from(JSON.stringify({
     id: user.id,
@@ -27,6 +40,10 @@ function createAuthToken(user) {
   })).toString("base64url");
 }
 
+// KAYNAK (REFERANS) BELİRTME: Güvenli Çerez (Cookie) Yönetimi
+// Tarayıcıya HttpOnly ve SameSite özellikleriyle güvenli token bırakma işlemi 
+// MDN Web Docs "Set-Cookie" başlığından referans alınarak yazılmıştır.
+// Kaynak URL: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie
 function setAuthCookie(res, token) {
   res.setHeader("Set-Cookie", `auth_token=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax`);
 }
@@ -48,7 +65,10 @@ app.post("/api/auth/register", async (req, res) => {
     const { ad, soyad, email, telefon, sifre } = req.body || {};
     const pool = await sql.connect(config);
 
-    // 1. Bu e-posta veya telefonla zaten kayıt var mı kontrol et
+    // KAYNAK (REFERANS) BELİRTME: SQL Injection Koruması (Parameterized Queries)
+    // Dışarıdan gelen verilerin doğrudan SQL sorgusuna yazılmasını engelleyerek
+    // güvenliği sağlamak amacıyla .input() parametrik sorgu yapısı kullanılmıştır. (OWASP Standartları)
+    // Kaynak URL: https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
     const checkUser = await pool.request()
       .input("Email", sql.NVarChar, email)
       .input("Telefon", sql.NVarChar, telefon)
@@ -58,7 +78,6 @@ app.post("/api/auth/register", async (req, res) => {
       return res.status(400).json(authErrorPayload(null, "Bu e-posta veya telefon zaten kayıtlı!"));
     }
 
-    // 2. Yeni kullanıcıyı SQL'e kaydet
     const insertResult = await pool.request()
       .input("Ad", sql.NVarChar, ad)
       .input("Soyad", sql.NVarChar, soyad)
@@ -74,7 +93,6 @@ app.post("/api/auth/register", async (req, res) => {
 
     const createdUser = insertResult.recordset[0];
 
-    // 3. Başarılı mesajı dön
     res.status(201).json({
       success: true,
       user: {
@@ -97,7 +115,6 @@ app.post("/api/auth/login", async (req, res) => {
     const { identifier, sifre } = req.body || {};
     const pool = await sql.connect(config);
 
-    // 1. E-posta veya Telefon numarasını ve şifreyi SQL'de ara
     const result = await pool.request()
       .input("Identifier", sql.NVarChar, identifier)
       .input("Sifre", sql.NVarChar, sifre)
@@ -109,7 +126,6 @@ app.post("/api/auth/login", async (req, res) => {
 
     const user = result.recordset[0];
 
-    // 2. Kullanıcı bulunamadıysa hata ver
     if (!user) {
       return res.status(401).json({
         success: false,

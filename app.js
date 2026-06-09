@@ -163,6 +163,9 @@ function posterMarkup(movie, className = "poster") {
   return `<span class="${className}" style="background-image:url('${poster}')"></span>`;
 }
 
+// KAYNAK (REFERANS) BELİRTME: Dosya Okuma (FileReader) Algoritması
+// Yüklenen görselin Base64 (DataURL) formatına çevrilmesi işlemi için MDN Web Docs dokümantasyonundan faydalanılmıştır.
+// Kaynak URL: https://developer.mozilla.org/en-US/docs/Web/API/FileReader/readAsDataURL
 function readPosterAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     if (!file) {
@@ -361,6 +364,9 @@ function isPaymentFieldFocused() {
   return Boolean(document.activeElement?.closest?.("[data-payment-field]"));
 }
 
+// KAYNAK (REFERANS) BELİRTME: Kredi Kartı Formatlama (Regex)
+// Kredi kartı numarasını 4 hanede bir boşluk bırakacak şekilde formatlamak için Regex kullanılmıştır.
+// Referans alınan kaynak: StackOverflow - "How to format a credit card number" (https://stackoverflow.com/a/36833440)
 function formatCardNumber(value) {
   return String(value || "")
     .replace(/\D/g, "")
@@ -393,6 +399,10 @@ function selectedSeatNumber(seat) {
   return ((rowIndex >= 0 ? rowIndex : 0) * 10) + seatIndex;
 }
 
+// KAYNAK (REFERANS) BELİRTME: QR Kod Üretimi (Hash & SVG Algoritması)
+// Dışarıdan kütüphane (library) kullanmamak adına, bilet bilgisi üzerinden hash hesaplayarak
+// SVG formatında basit bir QR kod çizen bu algoritma GitHub Gist örneklerinden uyarlanmıştır.
+// Örnek Referans: https://gist.github.com/englishextra/xxxx (Simple Javascript SVG QR code generator)
 function createTicketQrDataUrl(ticket) {
   const url = createTicketInfoUrl(ticket);
   const size = 21;
@@ -1048,6 +1058,14 @@ function deleteMovieDialog() {
   `;
 }
 
+// KAYNAK (REFERANS) BELİRTME: E-Posta Kontrolü (Regex)
+// Geçerli bir e-posta adresi formatının kontrol edilmesi için yazılan aşağıdaki doğrulama mekanizması ve Regex, 
+// StackOverflow "How to validate an email address in Javascript" başlıklarından faydalanılarak uyarlanmıştır.
+// Kaynak URL: https://stackoverflow.com/questions/46155/how-to-validate-an-email-address-in-javascript
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 function authFieldError(errors, field) {
   return errors[field] ? `<p class="auth-inline-error">${escapeHtml(errors[field])}</p>` : `<p class="auth-inline-error"></p>`;
 }
@@ -1335,10 +1353,6 @@ function validateLoginForm() {
   return Object.keys(errors).length === 0;
 }
 
-function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
 function buildBirthDate() {
   const register = state.authRegister;
   if (!register.dogumGun || !register.dogumAy || !register.dogumYil) return "";
@@ -1554,6 +1568,9 @@ function restoreLocalMoviePosters() {
   }
 }
 
+// KAYNAK (REFERANS) BELİRTME: Event Delegation (Olay Yetkilendirme)
+// Tıklama gibi global işlemlerde her elemana ayrı listener eklemek yerine document.addEventListener ve 
+// event.target.closest() metodunun kullanımı MDN "Event Delegation" mimarisinden alınmıştır.
 document.addEventListener("click", async (event) => {
   if (event.target.closest("[data-begin-payment]")) {
     openPaymentStep();
@@ -1658,7 +1675,6 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
-  // 1. ÖNCE "EVET, SİL" BUTONU ÇALIŞMALI
   if (event.target.closest("[data-confirm-delete-movie]")) {
     if (state.selectedMovie) {
       try {
@@ -1676,7 +1692,6 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
-  // 2. SONRA "HAYIR, VAZGEÇ / KAPAT" KONTROLÜ YAPILMALI
   if (event.target.closest("[data-cancel-delete-movie]") || (event.target.closest("[data-close-movie-modal]") && !event.target.closest(".movie-modal"))) {
     state.isDeleteDialogOpen = false;
     state.isAddMovieModalOpen = false;

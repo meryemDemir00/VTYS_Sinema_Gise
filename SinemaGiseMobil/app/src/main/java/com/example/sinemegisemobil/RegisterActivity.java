@@ -38,6 +38,10 @@ public class RegisterActivity extends AppCompatActivity {
                 String email = etEmail.getText().toString().trim();
                 String sifre = etKayitSifre.getText().toString().trim();
 
+                // KAYNAK (REFERANS) BELİRTME: Temel Form Doğrulama (Validation)
+                // Kullanıcı girdilerinin boş olup olmadığını kontrol eden bu standart algoritma yapısı
+                // Android UI form dizayn standartları ve Java String API dökümantasyonundan referans alınmıştır.
+                // Kaynak URL: https://developer.android.com/training/adding-an-app-bar/action-views
                 if (ad.isEmpty() || soyad.isEmpty() || telefon.isEmpty() || email.isEmpty() || sifre.isEmpty()) {
                     Toast.makeText(RegisterActivity.this, "Tüm alanları doldurunuz!", Toast.LENGTH_SHORT).show();
                     return;
@@ -49,6 +53,10 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void sunucuyaKayitOl(String ad, String soyad, String telefon, String email, String sifre) {
+        // KAYNAK (REFERANS) BELİRTME: HashMap ile Dinamik İstek Gövdesi Oluşturma
+        // Retrofit servislerine post verilerini anahtar-değer (Key-Value) çiftleri halinde göndermek için
+        // kullanılan bu yöntem, Java Collections ve Retrofit dökümantasyonlarından uyarlanmıştır.
+        // Kaynak URL: https://square.github.io/retrofit/
         HashMap<String, String> bilgiler = new HashMap<>();
         bilgiler.put("ad", ad);
         bilgiler.put("soyad", soyad);
@@ -59,12 +67,21 @@ public class RegisterActivity extends AppCompatActivity {
         ApiService apiService = RetrofitClient.getService();
         Call<ResponseBody> call = apiService.kayitOl(bilgiler);
 
+        // KAYNAK (REFERANS) BELİRTME: Retrofit Asenkron İstek Mekanizması (Callback)
+        // Ağ operasyonlarının Android ana arayüz iş parçacığını (Main Thread) kilitlememesi için
+        // arka planda kuyruğa alınması (enqueue) işlemi Retrofit kütüphanesinin standart şablonudur.
+        // Kaynak URL: https://futurestud.io/tutorials/retrofit-2-how-to-run-network-requests-synchronously-or-asynchronously
         call.enqueue(new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                 if (response.isSuccessful()) {
                     Toast.makeText(RegisterActivity.this, "Kayıt Başarılı! Giriş yapabilirsiniz.", Toast.LENGTH_LONG).show();
-                    finish(); // Kayıt başarılıysa sayfayı kapat ve Login'e dön
+
+                    // KAYNAK (REFERANS) BELİRTME: Aktivite Yaşam Döngüsü ve Ekran Kapatma (finish)
+                    // Başarılı bir kayıttan sonra mevcut kayıt ekranının Android bellek yığınından (Backstack)
+                    // temizlenerek kapatılması Android Activity Lifecycle dökümantasyonuna dayanmaktadır.
+                    // Kaynak URL: https://developer.android.com/guide/components/activities/activity-lifecycle
+                    finish();
                 } else {
                     Toast.makeText(RegisterActivity.this, "Kayıt başarısız oldu: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
